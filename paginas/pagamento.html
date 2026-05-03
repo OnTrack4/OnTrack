@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnTrack - Assinatura Premium</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+
+<body>
+
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Início</a></li>
+                <li><a href="../index.html#planos">Planos</a></li>
+                <li><a href="../index.html#contato">Contato</a></li>
+            </ul>
+            <div id="nav-usuario">
+                <a href="login.html">Entrar</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+
+        <section id="escolha-plano">
+            <h2>Assine o Premium</h2>
+            <p>Escolha o plano que melhor se encaixa para você</p>
+
+            <div class="planos-pagamento">
+
+                <div class="plano-opcao" id="plano-mensal" onclick="selecionarPlano('mensal')">
+                    <div class="plano-opcao-header">
+                        <h3>Mensal</h3>
+                        <div class="plano-preco">
+                            <span class="preco-valor">R$ 49</span>
+                            <span class="preco-periodo">/mês</span>
+                        </div>
+                    </div>
+                    <ul>
+                        <li>Cancele quando quiser</li>
+                        <li>Acesso imediato</li>
+                        <li>Todas as funcionalidades Premium</li>
+                    </ul>
+                </div>
+
+                <div class="plano-opcao plano-opcao-destaque" id="plano-anual" onclick="selecionarPlano('anual')">
+                    <span class="plano-tag">Melhor valor</span>
+                    <div class="plano-opcao-header">
+                        <h3>Anual</h3>
+                        <div class="plano-preco">
+                            <span class="preco-valor">R$ 39</span>
+                            <span class="preco-periodo">/mês</span>
+                        </div>
+                        <span class="preco-total">R$ 468/ano — economia de R$ 120</span>
+                    </div>
+                    <ul>
+                        <li>20% de desconto</li>
+                        <li>Acesso imediato</li>
+                        <li>Todas as funcionalidades Premium</li>
+                    </ul>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="forma-pagamento">
+            <h2>Forma de pagamento</h2>
+
+            <div class="abas">
+                <button id="btn-cartao" onclick="mostrarPagamento('cartao')">💳 Cartão de crédito</button>
+                <button id="btn-pix" onclick="mostrarPagamento('pix')">📱 Pix</button>
+            </div>
+
+            <div id="aba-cartao">
+                <form id="form-cartao">
+
+                    <label for="nome-cartao">Nome no cartão</label>
+                    <input type="text" id="nome-cartao" placeholder="Como está no cartão" required>
+
+                    <label for="numero-cartao">Número do cartão</label>
+                    <input type="text" id="numero-cartao" placeholder="0000 0000 0000 0000" maxlength="19" required>
+
+                    <div class="cartao-linha">
+                        <div>
+                            <label for="validade">Validade</label>
+                            <input type="text" id="validade" placeholder="MM/AA" maxlength="5" required>
+                        </div>
+                        <div>
+                            <label for="cvv">CVV</label>
+                            <input type="text" id="cvv" placeholder="123" maxlength="3" required>
+                        </div>
+                    </div>
+
+                    <label for="parcelas">Parcelas</label>
+                    <select id="parcelas">
+                        <option value="1">1x sem juros</option>
+                        <option value="2">2x sem juros</option>
+                        <option value="3">3x sem juros</option>
+                        <option value="6">6x sem juros</option>
+                        <option value="12">12x sem juros</option>
+                    </select>
+
+                    <button type="submit" class="btn-pagar" id="btn-pagar-cartao">
+                        Assinar Premium
+                    </button>
+
+                </form>
+            </div>
+
+            <div id="aba-pix" style="display:none;">
+                <div class="pix-box">
+                    <p>Após clicar em gerar Pix, um QR Code será exibido aqui.</p>
+                    <p>O acesso Premium é liberado automaticamente após a confirmação do pagamento.</p>
+                    <button class="btn-pagar" id="btn-gerar-pix">
+                        Gerar QR Code Pix
+                    </button>
+                    <div id="qrcode-pix"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="resumo">
+            <h2>Resumo do pedido</h2>
+            <div class="resumo-box">
+                <div class="resumo-linha">
+                    <span>Plano selecionado</span>
+                    <span id="resumo-plano">Premium Mensal</span>
+                </div>
+                <div class="resumo-linha">
+                    <span>Valor</span>
+                    <span id="resumo-valor">R$ 49,00/mês</span>
+                </div>
+                <div class="resumo-linha resumo-total">
+                    <span>Total hoje</span>
+                    <span id="resumo-total">R$ 49,00</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 OnTrack. Todos os direitos reservados.</p>
+    </footer>
+
+    <script type="module">
+        import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
+
+        // ===========================
+        // NAVBAR DINAMICA
+        // ===========================
+
+        verificarLogin(async (usuario) => {
+            const navUsuario = document.getElementById('nav-usuario');
+            if (usuario) {
+                const dados = await buscarDadosUsuario(usuario.uid);
+                const nome = dados?.nome || usuario.displayName || 'Usuário';
+                navUsuario.innerHTML = `
+                    <span class="nav-saudacao">Olá, ${nome}</span>
+                    <a href="perfil.html" class="btn-perfil">Meu perfil</a>
+                    <button id="btn-sair" class="btn-sair">Sair</button>
+                `;
+                document.getElementById('btn-sair').addEventListener('click', async () => {
+                    await logout();
+                    window.location.href = '../index.html';
+                });
+            }
+        });
+
+        // ===========================
+        // PLANO SELECIONADO
+        // ===========================
+
+        let planoAtual = 'mensal';
+
+        window.selecionarPlano = (plano) => {
+            planoAtual = plano;
+
+            document.getElementById('plano-mensal').classList.remove('plano-selecionado');
+            document.getElementById('plano-anual').classList.remove('plano-selecionado');
+            document.getElementById(`plano-${plano}`).classList.add('plano-selecionado');
+
+            if (plano === 'mensal') {
+                document.getElementById('resumo-plano').textContent = 'Premium Mensal';
+                document.getElementById('resumo-valor').textContent = 'R$ 49,00/mês';
+                document.getElementById('resumo-total').textContent = 'R$ 49,00';
+            } else {
+                document.getElementById('resumo-plano').textContent = 'Premium Anual';
+                document.getElementById('resumo-valor').textContent = 'R$ 39,00/mês';
+                document.getElementById('resumo-total').textContent = 'R$ 468,00';
+            }
+        };
+
+        selecionarPlano('mensal');
+
+        // ===========================
+        // ABAS CARTÃO / PIX
+        // ===========================
+
+        window.mostrarPagamento = (tipo) => {
+            document.getElementById('aba-cartao').style.display = tipo === 'cartao' ? 'block' : 'none';
+            document.getElementById('aba-pix').style.display = tipo === 'pix' ? 'block' : 'none';
+            document.getElementById('btn-cartao').classList.toggle('ativo', tipo === 'cartao');
+            document.getElementById('btn-pix').classList.toggle('ativo', tipo === 'pix');
+        };
+
+        mostrarPagamento('cartao');
+        document.getElementById('btn-cartao').classList.add('ativo');
+
+        // ===========================
+        // FORMATAÇÃO DO CARTÃO
+        // ===========================
+
+        document.getElementById('numero-cartao').addEventListener('input', (e) => {
+            let valor = e.target.value.replace(/\D/g, '');
+            valor = valor.replace(/(\d{4})/g, '$1 ').trim();
+            e.target.value = valor;
+        });
+
+        document.getElementById('validade').addEventListener('input', (e) => {
+            let valor = e.target.value.replace(/\D/g, '');
+            if (valor.length >= 2) valor = valor.slice(0, 2) + '/' + valor.slice(2);
+            e.target.value = valor;
+        });
+
+        // ===========================
+        // CHECKOUT STRIPE
+        // ===========================
+
+        document.getElementById('form-cartao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await iniciarCheckout();
+        });
+
+        document.getElementById('btn-gerar-pix').addEventListener('click', async () => {
+            await iniciarCheckout();
+        });
+
+        async function iniciarCheckout() {
+            const botao = document.querySelector('.btn-pagar');
+            botao.textContent = 'Redirecionando...';
+            botao.disabled = true;
+
+            const { auth } = await import('../firebase.js');
+            const usuario = auth.currentUser;
+
+            if (!usuario) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const resposta = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    plano: planoAtual,
+                    usuarioId: usuario.uid
+                })
+            });
+
+            const dados = await resposta.json();
+
+            if (dados.url) {
+                window.location.href = dados.url;
+            } else {
+                alert('Erro ao iniciar pagamento. Tente novamente.');
+                botao.textContent = 'Assinar Premium';
+                botao.disabled = false;
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>

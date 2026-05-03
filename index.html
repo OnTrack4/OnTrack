@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html lang="pt-br"> <!-- define que o idioma e portugues-->
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- oque eu pesquisei e bem desnecessario mas deixa, vai que alguem usa o edge ne-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- para o site funcionar bem no cell-->
+    <title>OnTrack - Inteligência Financeira</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<!-- vou abrir o corpo do site, e deixar um cabeçalho no começo-->
+
+<body>
+
+    <!-- abrir o cabeçalho e deixar clicavel-->
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#">Início</a></li>
+                <li><a href="#recursos">Recursos</a></li>
+                <li><a href="#dicas">Dicas</a></li>
+                <li><a href="#ferramentas">Ferramentas</a></li>
+                <li><a href="#contato">Contato</a></li>
+            </ul>
+
+            <div id="nav-usuario">
+                <a href="paginas/login.html">Entrar</a>
+            </div>
+
+        </nav>
+    </header>
+
+    <main>
+        <!-- titulo e paragrafos-->
+
+
+        <h1>Bem-vindo ao OnTrack - Inteligência Financeira</h1>
+        <p>Descubra como a inteligência financeira pode transformar sua vida financeira. Com o OnTrack, você pode
+            aprender a
+            gerenciar suas finanças de forma inteligente, tomar decisões financeiras informadas e alcançar seus
+            objetivos
+            financeiros.</p>
+        <p>Explore nossos recursos, dicas e ferramentas para melhorar sua saúde financeira e alcançar a liberdade
+            financeira
+            que você merece.</p>
+
+        <!-- deixar titulos em h2 e etc e conectar com o cabeçalho para ser enviando para ca usado os id-->
+        <!-- criar card para depois resolver no css, so o do primeiro ta bom-->
+        <section id="recursos">
+            <h2>O que o OnTrack faz por você</h2>
+
+            <div class="card">
+                <h3>Análise de mercado</h3>
+                <p>Nossa IA monitora ações e fundos em tempo real e identifica as melhores tendências.</p>
+            </div>
+
+            <div class="card">
+                <h3>Leitura de notícias</h3>
+                <p>Analisamos o impacto de notícias políticas e econômicas nos seus investimentos.</p>
+                <a href="paginas/noticia.html">Ver notícias ao vivo →</a>
+            </div>
+
+            <div class="card">
+                <h3>Carteira personalizada</h3>
+                <p>Recomendações feitas de acordo com o seu perfil de risco e objetivos financeiros.</p>
+            </div>
+
+        </section>
+
+        <section id="dicas">
+            <h2>Dicas</h2>
+            <p>Aprenda estratégias práticas para investir melhor e proteger o seu patrimônio.</p>
+        </section>
+
+        <section id="ferramentas">
+            <h2>Ferramentas</h2>
+            <p>Simuladores, gráficos e relatórios personalizados para acompanhar seus investimentos.</p>
+        </section>
+
+        <!-- abrir uma seçao de planos e mandar para a aba de pagamento-->
+        <section id="planos">
+            <h2>Escolha seu plano</h2>
+
+            <div class="plano">
+                <h3>Básico</h3>
+                <p>Gratuito</p>
+                <ul>
+                    <li>Orientações essenciais de investimento</li>
+                    <li>Análise básica de ações</li>
+                    <li>Acesso ao painel principal</li>
+                </ul>
+                <a href="paginas/login.html">Começar grátis</a>
+            </div>
+
+            <div class="plano">
+                <h3>Premium</h3>
+                <p>R$ ??/mês</p>
+                <ul>
+                    <li>Tudo do plano Básico</li>
+                    <li>Resumos de notícias políticas e econômicas</li>
+                    <li>Análise profunda de tendências</li>
+                    <li>Carteira personalizada completa</li>
+                </ul>
+                <a href="paginas/pagamento.html">Assinar Premium</a>
+            </div>
+
+        </section>
+
+        <!-- abrir um seçao de contato caso alguem queira entrar em contanto sobre algo, nao se esqueça de abrir um formulario para deixar bonitinho-->
+        <section id="contato">
+            <h2>Contato</h2>
+            <p>Tem alguma dúvida? Fale com a nossa equipe.</p>
+
+            <form>
+                <label for="nome">Nome:</label>
+                <input type="text" id="nome" name="nome" required>
+
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+
+                <label for="mensagem">Mensagem:</label>
+                <textarea id="mensagem" name="mensagem" required></textarea>
+
+                <button type="submit">Enviar</button>
+            </form>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 OnTrack nao sei oque falar aquir</p>
+        <p> mexer aqui e bem engraçado</p>
+
+    </footer>
+
+    <script type="module">
+    import { verificarLogin, buscarDadosUsuario, logout } from './firebase.js';
+
+    verificarLogin(async (usuario) => {
+
+        const navUsuario = document.getElementById('nav-usuario');
+
+        if (usuario) {
+            // usuario logado — busca os dados e mostra na navbar
+            const dados = await buscarDadosUsuario(usuario.uid);
+            const nome = dados?.nome || usuario.displayName || 'Usuário';
+
+            navUsuario.innerHTML = `
+                <span class="nav-saudacao">Olá, ${nome}</span>
+                <a href="paginas/perfil.html" class="btn-perfil">Meu perfil</a>
+                <button id="btn-sair-index" class="btn-sair">Sair</button>
+            `;
+
+            document.getElementById('btn-sair-index').addEventListener('click', async () => {
+                await logout();
+                window.location.href = 'index.html';
+            });
+
+        } else {
+            // usuario nao logado — mostra o botão de entrar
+            navUsuario.innerHTML = `
+                <a href="paginas/login.html">Entrar</a>
+            `;
+        }
+    });
+</script>
+
+</body>
+
+
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnTrack - Notícias do Mercado</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+
+<body>
+
+    <!-- mesmo cabeçalho do index -->
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Início</a></li>
+                <li><a href="../index.html#planos">Planos</a></li>
+                <li><a href="../index.html#contato">Contato</a></li>
+                <li><a href="../index.html">← Voltar ao início</a></li>
+            </ul>
+            <div id="nav-usuario">
+                <a href="../paginas/login.html">Entrar</a>
+            </div>
+        </nav>
+    </header>
+    <main>
+
+        <section id="noticias">
+            <h2>Notícias do Mercado</h2>
+            <p>Atualizado em tempo real</p>
+
+            <div class="busca-container">
+                <input type="text" id="input-busca" placeholder="Pesquisar notícias... ex: Selic, Bovespa, dólar" />
+                <button onclick="pesquisar()">Buscar</button>
+            </div>
+
+            <!-- conectar a api para deixar as noticias -->
+            <div id="lista-noticias">
+                <p>Carregando notícias...</p>
+            </div>
+
+            <div class="paginacao" id="paginacao"></div>
+
+            <!-- botão pra voltar -->
+            <a href="../index.html">← Voltar ao início</a>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 OnTrack. Todos os direitos reservados.</p>
+    </footer>
+
+    <script type="module">
+        import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
+
+        verificarLogin(async (usuario) => {
+
+            if (!usuario) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const dados = await buscarDadosUsuario(usuario.uid);
+            const plano = dados?.plano || 'basico';
+            const nome = dados?.nome || usuario.displayName || 'Usuário';
+
+            // navbar dinamica
+            const navUsuario = document.getElementById('nav-usuario');
+            navUsuario.innerHTML = `
+            <span class="nav-saudacao">Olá, ${nome}</span>
+            <a href="perfil.html" class="btn-perfil">Meu perfil</a>
+            <button id="btn-sair" class="btn-sair">Sair</button>
+        `;
+            document.getElementById('btn-sair').addEventListener('click', async () => {
+                await logout();
+                window.location.href = '../index.html';
+            });
+
+            // aviso para plano basico
+            if (plano === 'basico') {
+                const aviso = document.createElement('div');
+                aviso.classList.add('aviso-basico');
+                aviso.innerHTML = `
+                <p>⭐ Quer resumos e análise das notícias? <a href="pagamento.html">Faça upgrade para o Premium</a></p>
+            `;
+                const secao = document.getElementById('noticias');
+                secao.insertBefore(aviso, secao.firstChild);
+            }
+        });
+    </script>
+
+    <script src="../script.js"></script>
+
+    <script type="module">
+        import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
+
+        verificarLogin(async (usuario) => {
+
+            if (!usuario) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const dados = await buscarDadosUsuario(usuario.uid);
+            const plano = dados?.plano || 'basico';
+            const nome = dados?.nome || usuario.displayName || 'Usuário';
+
+            // navbar dinamica
+            const navUsuario = document.getElementById('nav-usuario');
+            navUsuario.innerHTML = `
+            <span class="nav-saudacao">Olá, ${nome}</span>
+            <a href="perfil.html" class="btn-perfil">Meu perfil</a>
+            <button id="btn-sair" class="btn-sair">Sair</button>
+        `;
+            document.getElementById('btn-sair').addEventListener('click', async () => {
+                await logout();
+                window.location.href = '../index.html';
+            });
+
+            // aviso para plano basico
+            if (plano === 'basico') {
+                const aviso = document.createElement('div');
+                aviso.classList.add('aviso-basico');
+                aviso.innerHTML = `
+                <p>⭐ Quer resumos e análise das notícias? <a href="pagamento.html">Faça upgrade para o Premium</a></p>
+            `;
+                const secao = document.getElementById('noticias');
+                secao.insertBefore(aviso, secao.firstChild);
+            }
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnTrack - Login</title>
+    <link rel="stylesheet" href="../style.css">
+
+</head>
+
+<body>
+
+    <!-- conectar o cabeçalho com a main para ser mandado de volta -->
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Início</a></li>
+                <li><a href="../index.html#recursos">Recursos</a></li>
+                <li><a href="../index.html#dicas">Dicas</a></li>
+                <li><a href="../index.html#ferramentas">Ferramentas</a></li>
+                <li><a href="../index.html#contato">Contato</a></li>
+            </ul>
+            <a href="../index.html">← Voltar ao início</a>
+        </nav>
+    </header>
+
+    <!-- area para fazer login/registro, depois arrumar certinho no css -->
+    <main>
+
+        <div class="login-box">
+
+            <h1>Bem-vindo</h1>
+            <p>Entre ou crie sua conta para continuar</p>
+
+            <!-- abas para alternar entre login e registro -->
+            <div class="abas">
+                <button id="btn-entrar">Entrar</button>
+                <button id="btn-registro">Criar conta</button>
+
+            </div>
+
+            <!-- area de login -->
+            <div id="aba-entrar">
+
+                <form>
+                    <label for="email-login">E-mail</label>
+                    <input type="email" id="email-login" name="email" placeholder="seu@email.com" required>
+
+                    <label for="senha-login">Senha</label>
+                    <input type="password" id="senha-login" name="senha" placeholder="••••••••" required>
+
+                    <a href="#">Esqueci minha senha</a>
+
+                    <button type="submit">Entrar</button>
+                </form>
+
+                <p>ou</p>
+
+                <button id="btn-google">Continuar com Google</button>
+
+            </div>
+
+            <!-- area de registro -->
+            <div id="aba-registro">
+
+                <form>
+                    <label for="nome-registro">Nome completo</label>
+                    <input type="text" id="nome-registro" name="nome" placeholder="Seu nome" required>
+
+                    <label for="email-registro">E-mail</label>
+                    <input type="email" id="email-registro" name="email" placeholder="seu@email.com" required>
+
+                    <label for="senha-registro">Senha</label>
+                    <input type="password" id="senha-registro" name="senha" placeholder="Mínimo 8 caracteres" required>
+
+                    <label for="confirmar-senha">Confirmar senha</label>
+                    <input type="password" id="confirmar-senha" name="confirmar-senha" placeholder="Repita a senha"
+                        required>
+
+                    <button type="submit">Criar conta</button>
+                </form>
+
+                <p>ou</p>
+
+                <button id="btn-google-registro">Continuar com Google</button>
+
+                <!-- vai precisar disso? fiquei muitona duvida, vai deixar uma area de termon? se sim entao criar para eo colocar os termos aqui-->
+                <p>Ao criar uma conta você concorda com os
+                    <a href="#">Termos de uso</a> e a
+                    <a href="#">Política de privacidade</a>
+                    do OnTrack.
+                </p>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 OnTrack.</p>
+    </footer>
+
+    <!-- trocar entre as abas de login e registr -->
+    <script type="module">
+        import { registrarUsuario, loginEmailSenha, loginGoogle } from '../firebase.js';
+
+        document.getElementById('aba-registro').style.display = 'none';
+        document.getElementById('btn-entrar').classList.add('ativo');
+
+        document.getElementById('btn-entrar').addEventListener('click', () => {
+            document.getElementById('aba-entrar').style.display = 'block';
+            document.getElementById('aba-registro').style.display = 'none';
+            document.getElementById('btn-entrar').classList.add('ativo');
+            document.getElementById('btn-registro').classList.remove('ativo');
+        });
+
+        document.getElementById('btn-registro').addEventListener('click', () => {
+            document.getElementById('aba-entrar').style.display = 'none';
+            document.getElementById('aba-registro').style.display = 'block';
+            document.getElementById('btn-entrar').classList.remove('ativo');
+            document.getElementById('btn-registro').classList.add('ativo');
+        });
+
+        document.getElementById('aba-entrar').querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email-login').value;
+            const senha = document.getElementById('senha-login').value;
+            const botao = e.target.querySelector('button');
+
+            botao.textContent = 'Entrando...';
+            botao.disabled = true;
+
+            const resultado = await loginEmailSenha(email, senha);
+
+            if (resultado.sucesso) {
+                window.location.href = '../index.html';
+            } else {
+                alert('Erro: ' + traduzirErro(resultado.erro));
+                botao.textContent = 'Entrar';
+                botao.disabled = false;
+            }
+        });
+
+        document.getElementById('aba-registro').querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nome = document.getElementById('nome-registro').value;
+            const email = document.getElementById('email-registro').value;
+            const senha = document.getElementById('senha-registro').value;
+            const confirmar = document.getElementById('confirmar-senha').value;
+            const botao = e.target.querySelector('button');
+
+            if (senha !== confirmar) {
+                alert('As senhas não coincidem!');
+                return;
+            }
+
+            if (senha.length < 8) {
+                alert('A senha deve ter pelo menos 8 caracteres!');
+                return;
+            }
+
+            botao.textContent = 'Criando conta...';
+            botao.disabled = true;
+
+            const resultado = await registrarUsuario(nome, email, senha);
+
+            if (resultado.sucesso) {
+                window.location.href = '../index.html';
+            } else {
+                alert('Erro: ' + traduzirErro(resultado.erro));
+                botao.textContent = 'Criar conta';
+                botao.disabled = false;
+            }
+        });
+
+        document.getElementById('btn-google').addEventListener('click', async () => {
+            const resultado = await loginGoogle();
+            if (resultado.sucesso) {
+                window.location.href = '../index.html';
+            } else {
+                alert('Erro: ' + traduzirErro(resultado.erro));
+            }
+        });
+
+        document.getElementById('btn-google-registro').addEventListener('click', async () => {
+            const resultado = await loginGoogle();
+            if (resultado.sucesso) {
+                window.location.href = '../index.html';
+            } else {
+                alert('Erro: ' + traduzirErro(resultado.erro));
+            }
+        });
+
+        function traduzirErro(erro) {
+            const erros = {
+                'auth/email-already-in-use': 'Este email já está cadastrado.',
+                'auth/invalid-email': 'Email inválido.',
+                'auth/weak-password': 'Senha muito fraca.',
+                'auth/user-not-found': 'Usuário não encontrado.',
+                'auth/wrong-password': 'Senha incorreta.',
+                'auth/invalid-credential': 'Email ou senha incorretos.',
+                'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.',
+                'auth/popup-closed-by-user': 'Login com Google cancelado.'
+            };
+            return erros[erro] || erro;
+        }
+
+    </script>
+
+</body>
+
+</html>

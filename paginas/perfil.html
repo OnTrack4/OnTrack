@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnTrack - Meu Perfil</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+
+<body>
+
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Início</a></li>
+                <li><a href="../index.html#recursos">Recursos</a></li>
+                <li><a href="../index.html#planos">Planos</a></li>
+                <li><a href="../index.html#contato">Contato</a></li>
+            </ul>
+            <div id="nav-usuario">
+                <!-- preenchido pelo JS -->
+            </div>
+        </nav>
+    </header>
+
+    <main>
+
+        <!-- card de informações do usuário -->
+        <section id="perfil">
+            <h2>Meu Perfil</h2>
+
+            <div class="perfil-box" id="perfil-box">
+                <p>Carregando...</p>
+            </div>
+
+        </section>
+
+        <!-- card do plano -->
+        <section id="plano-usuario">
+            <h2>Meu Plano</h2>
+
+            <div class="plano-box" id="plano-box">
+                <p>Carregando...</p>
+            </div>
+
+        </section>
+
+        <!-- card do perfil de investidor -->
+        <section id="perfil-investidor">
+            <h2>Meu Perfil de Investidor</h2>
+
+            <div class="investidor-box" id="investidor-box">
+                <!-- preenchido pelo JS com o resultado do questionário -->
+                <p>Você ainda não fez o questionário de perfil de investidor.</p>
+                <a href="questionario.html" class="btn-questionario">Fazer questionário →</a>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 OnTrack. Todos os direitos reservados.</p>
+    </footer>
+
+    <script type="module">
+        import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
+
+        // se nao estiver logado, manda pro login
+        verificarLogin(async (usuario) => {
+
+            if (!usuario) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // busca os dados do usuario no firestore
+            const dados = await buscarDadosUsuario(usuario.uid);
+
+            // preenche a navbar
+            document.getElementById('nav-usuario').innerHTML = `
+                <span class="nav-saudacao">Olá, ${dados?.nome || usuario.displayName || 'Usuário'}</span>
+                <button onclick="sair()" class="btn-sair">Sair</button>
+            `;
+
+            // preenche o card de perfil
+            document.getElementById('perfil-box').innerHTML = `
+                <div class="perfil-info">
+                    <div class="perfil-avatar">${(dados?.nome || 'U')[0].toUpperCase()}</div>
+                    <div>
+                        <h3>${dados?.nome || usuario.displayName || 'Usuário'}</h3>
+                        <p>${usuario.email}</p>
+                        <p class="perfil-data">Membro desde ${new Date(usuario.metadata.creationTime).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                </div>
+            `;
+
+            // preenche o card do plano
+            const plano = dados?.plano || 'basico';
+            document.getElementById('plano-box').innerHTML = `
+                <div class="plano-atual">
+                    <span class="plano-badge ${plano === 'premium' ? 'badge-premium' : 'badge-basico'}">
+                        ${plano === 'premium' ? '⭐ Premium' : '🆓 Básico'}
+                    </span>
+                    <p>${plano === 'premium'
+                        ? 'Você tem acesso completo a todas as funcionalidades.'
+                        : 'Faça upgrade para o Premium e desbloqueie todas as funcionalidades.'}
+                    </p>
+                    ${plano !== 'premium' ? '<a href="pagamento.html" class="btn-upgrade">Fazer upgrade →</a>' : ''}
+                </div>
+            `;
+
+            // preenche o perfil de investidor se existir
+            if (dados?.perfilInvestidor) {
+                const perfis = {
+                    conservador: { emoji: '🟢', descricao: 'Você prefere segurança e baixo risco nos investimentos.' },
+                    moderado: { emoji: '🟡', descricao: 'Você aceita algum risco em busca de mais retorno.' },
+                    arrojado: { emoji: '🔴', descricao: 'Você aceita alto risco em busca de alto retorno.' }
+                };
+                const p = perfis[dados.perfilInvestidor];
+                document.getElementById('investidor-box').innerHTML = `
+                    <div class="investidor-resultado">
+                        <span class="investidor-emoji">${p.emoji}</span>
+                        <h3>${dados.perfilInvestidor.charAt(0).toUpperCase() + dados.perfilInvestidor.slice(1)}</h3>
+                        <p>${p.descricao}</p>
+                        <a href="questionario.html">Refazer questionário →</a>
+                    </div>
+                `;
+            }
+        });
+
+        // função de sair
+        window.sair = async () => {
+            await logout();
+        };
+
+    </script>
+
+</body>
+
+</html>
