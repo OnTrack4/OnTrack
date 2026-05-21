@@ -232,13 +232,13 @@
         // CHECKOUT STRIPE
         // ===========================
 
-        document.getElementById('form-cartao').addEventListener('submit', async (e) => {
+        document.getElementById('form-cartao').addEventListener('submit', (e) => {
             e.preventDefault();
-            await iniciarCheckout();
+            alert('Em breve! O pagamento será integrado em breve.');
         });
 
-        document.getElementById('btn-gerar-pix').addEventListener('click', async () => {
-            await iniciarCheckout();
+        document.getElementById('btn-gerar-pix').addEventListener('click', () => {
+            alert('Em breve! O Pix será integrado em breve.');
         });
 
         async function iniciarCheckout() {
