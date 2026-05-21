@@ -35,15 +35,15 @@
                 <h2> Descubra seu perfil de investidor</h2>
                 <p>Responda 5 perguntas rapidas e descubram seu perfil</p>
 
-                <div class="progesso-bar">
+                <div class="progresso-bar">
                     <div class="progresso-fill" id="progresso-fill"></div>
                 </div>
 
-                <spaw class=" progresso-texto" id="progresso-texto">texto 1 de 5</spaw>
+                <span class=" progresso-texto" id="progresso-texto">texto 1 de 5</span>
 
             </div>
 
-            <div class="questionario-box" id="pergunta-1">
+            <div class="questionario-box" id="questionario-box">
 
 
                 <div class="pergunta" id="pergunta-1">
@@ -69,34 +69,34 @@
                     <h3> Em quanto tempo voce espara ver resultandos?</h3>
                     <div class=" opcoes">
                         <label class="opcao">
-                            <imput type="radio" name="p2" value="1">
+                            <input type="radio" name="p2" value="1">
                                 <span> mais de 5 anos</span>
                         </label>
                         <label class="opcao">
-                            <imput type="radio" name="p2" value="2">
+                            <input type="radio" name="p2" value="2">
                                 <span> menos de 2 anos</span>
                         </label>
                         <label class="opcao">
-                            <imput type="radio" name="p2" value="3">
+                            <input type="radio" name="p2" value="3">
                                 <span> entre 2 e 5 anos</span>
                         </label>
                     </div>
-
-                    <div class="pergunta" id=" pergunta-3" style="display:none">
+                </div>
+                    <div class="pergunta" id="pergunta-3" style="display:none">
                         <h3> como voce reagem se seu investimento cair em 20%</h3>
                         <div class="opcoes">
                             <label class="opcao">
-                                <imput type="radio" name="p3" value="1">
+                                <input type="radio" name="p3" value="1">
                                     <span>fico muito preocupando e prefiro retirar o dinheiro</span>
                             </label>
                             <label>
-                                <imput type="radio" name="p3" value="2">
+                                <input type="radio" name="p3" value="2">
                                     <span>Fico preocuoando mas espero a recuperaçao</span>
                             </label>
-                            <labe>
-                                <imput type="radio" name="p3" value="3">
+                            <label>
+                                <input type="radio" name="p3" value="3">
                                     <span>vejo isso como uma oportunidade e invisto mais</span>
-                            </labe>
+                            </label>
                         </div>
                     </div>
 
@@ -104,15 +104,15 @@
                         <h3>Qual porcetagem da sua renda voce estaria disposto(a) a investir</h3>
                         <div class="opcoes">
                             <label>
-                                <imput type="radio" name="p4" value="1">
+                                <input type="radio" name="p4" value="1">
                                     <span>ate 10%</span>
                             </label>
                             <label>
-                                <imput type="radio" name="p4" value="2">
+                                <input type="radio" name="p4" value="2">
                                     <span>entre 10% e 30%</span>
                             </label>
                             <label>
-                                <imput type="radio" name="p4" value="3">
+                                <input type="radio" name="p4" value="3">
                                     <span>Acima de 30%</span>
                             </label>
                         </div>
@@ -125,38 +125,47 @@
                         <h3>Você já investiu antes?</h3>
                         <div class="opcoes">
                             <label>
-                                <imput type="radio" id="p5" value="1" value="1">
+                                <input type="radio" name="p5" value="1">
                                     <span> Nunca investi, sou iniciante</span>
                             </label>
                             <label>
-                                <imput type="radio" id="p5" value="2">
-                                    <span>  Sim, já investi um pouco, e tenho um pouco de conhecimento sobre isso</span>
+                                <input type="radio" name="p5" value="2">
+                                    <span> Sim, já investi um pouco, e tenho um pouco de conhecimento sobre isso</span>
                             </label>
                             <label>
-                                <imput type="radio" id="p5" value="3">
+                                <input type="radio" name="p5" value="3">
                                     <span>Sim, já operei ações, fundos ou criptos</span>
                             </label>
                         </div>
                     </div>
 
                     <div class="questionario-nav">
-                        <div id="btn-anterior" id="resultando-box" style="display:none">
-                            <div id ="resultando-conteudo"></div>
-                            <div class="resultando-acoes">
-                                <a href="perfil.html" class="btn-upgrade">ver o meu perfil</a>
-                                <button onclick="resfazerQuestionario()" class="btn-sair">resfazer o questionario</button>
-                        </div>
+                        <button id="btn-anterior" onclick="perguntaAnterior()" style="display:none;">← Anterior</button>
+                        <button id="btn-proximo" onclick="proximaPergunta()">Próxima →</button>
+                        <button id="btn-finalizar" onclick="finalizarQuestionario()" style="display:none;">Ver meu
+                            perfil</button>
                     </div>
 
-                    </section>
+                
+            </div>
+                <!-- resultado -->
+                <div class="resultado-box" id="resultado-box" style="display:none;">
+                    <div id="resultado-conteudo"></div>
+                    <div class="resultado-acoes">
+                        <a href="perfil.html" class="btn-upgrade">Ver meu perfil →</a>
+                        <button onclick="refazerQuestionario()" class="btn-sair">Refazer questionário</button>
+                    </div>
+                </div>
+
+        </section>
 
     </main>
 
     <footer>
         <p>&copy; 2026 Ontrack, ainda em processo isso(ate agr nao sei oque adicionar)</p>
-        </footer>
+    </footer>
 
-        <script type="module">
+    <script type="module">
         import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
         import { db } from '../firebase.js';
         import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -298,7 +307,7 @@
                     sugestoes: ['Fundos multimercado', 'ETFs de índice', 'FIIs', 'Ações de grandes empresas']
                 },
                 arrojado: {
-                    cor: '🔴',
+                    emoji: '🔴',
                     titulo: 'Arrojado',
                     descricao: 'Você busca alta rentabilidade e aceita volatilidade. Tem perfil para ativos de maior risco e potencial retorno elevado.',
                     sugestoes: ['Ações de crescimento', 'Criptomoedas', 'Fundos de ações', 'BDRs']
