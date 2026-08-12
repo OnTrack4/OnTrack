@@ -1,0 +1,7 @@
+# Regras do Projeto OnTrack (Front-End)
+
+- Tecnologia: HTML5, CSS3 puro, JavaScript ES6 (Modules).
+- Regra de Ouro: NUNCA altere o layout HTML base ou o CSS sem autorização explícita.
+- Mantenha funções visuais puras (DOM, auto-resize, animações de chat, indicadores de digitação).
+- Toda comunicação com IA/Back-end deve ser feita via requisicões `fetch` direcionadas para a API local (ex: POST http://localhost:5000/api/chat).
+- Nunca inclua chaves de API sensíveis (API Keys) no código do cliente.

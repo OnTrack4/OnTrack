@@ -1,0 +1,17 @@
+# Segredos e chaves
+.env
+*.env
+back-end/.env
+
+# Ambientes Virtuais
+venv/
+.venv/
+env/
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Arquivos do sistema / IDE
+.DS_Store
+.vscode/

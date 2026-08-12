@@ -1256,3 +1256,240 @@ footer {
     margin-top: 24px;
     align-items: center;
 }
+
+
+/* 
+   CONSULTOR pagina
+ */
+
+#consultor {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px);
+    overflow: hidden;
+}
+
+.consultor-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.consultor-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--preto);
+    margin: 0;
+}
+
+.consultor-header p {
+    font-size: 14px;
+    color: var(--cinza-texto);
+    margin: 0;
+    flex: 1;
+}
+
+#btn-limpar {
+    background: transparent;
+    border: 1px solid var(--cinza-borda);
+    color: var(--cinza-texto);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#btn-limpar:hover {
+    background-color: var(--cinza-fundo);
+    color: var(--preto);
+}
+
+.chat-container {
+    flex: 1;
+    min-height: 0;
+    margin-bottom: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    background-color: var(--cinza-fundo);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 12px;
+    scroll-behavior: smooth;
+}
+
+.mensagem {
+    display: flex;
+    gap: 12px;
+    max-width: 80%;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.mensagem-ia {
+    max-width: 90% !important;
+    line-height: 1.6;
+}
+
+.mensagem-ia .mensagem-conteudo {
+    padding: 18px;
+    line-height: 1.6;
+}
+
+.mensagem-usuario {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.mensagem-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.mensagem-conteudo {
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 12px;
+    padding: 12px 16px;
+    max-width: 100%;
+}
+
+.mensagem-usuario .mensagem-conteudo {
+    background-color: var(--azul);
+    border-color: var(--azul);
+}
+
+.mensagem-conteudo p {
+    font-size: 15px;
+    color: var(--preto);
+    margin: 0 0 4px 0;
+    line-height: 1.6;
+}
+
+.mensagem-usuario .mensagem-conteudo p {
+    color: #fff;
+}
+
+.mensagem-hora {
+    font-size: 11px;
+    color: var(--cinza-texto);
+    display: block;
+}
+
+.mensagem-usuario .mensagem-hora {
+    color: rgba(255,255,255,0.7);
+}
+
+/* indicador de digitação */
+.digitando {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.digitando span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--cinza-texto);
+    animation: bounce 1.2s infinite;
+}
+
+.digitando span:nth-child(2) { animation-delay: 0.2s; }
+.digitando span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+}
+
+/* área de input */
+.chat-input-area {
+    width: 100%;
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.chat-input-area textarea {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--preto);
+    background-color: var(--branco);
+    resize: none;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.chat-input-area textarea:focus {
+    outline: none;
+    border-color: var(--azul);
+}
+
+#btn-enviar {
+    background-color: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+#btn-enviar:hover {
+    background-color: #0f4a82;
+}
+
+#btn-enviar:disabled {
+    background-color: var(--cinza-borda);
+    cursor: not-allowed;
+}
+
+.nav-ativo {
+    color: var(--azul) !important;
+    font-weight: 600;
+}
+
+/* responsivo */
+@media (max-width: 768px) {
+    .mensagem {
+        max-width: 95%;
+    }
+
+    .mensagem-ia {
+        max-width: 95% !important;
+    }
+
+    #consultor {
+        height: calc(100vh - 160px);
+    }
+}

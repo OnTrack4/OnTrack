@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnTrack - Consultor IA</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+
+<body>
+
+    <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Início</a></li>
+                <li><a href="noticia.html">Notícias</a></li>
+                <li><a href="questionario.html">Perfil Investidor</a></li>
+                <li><a href="consultor.html" class="nav-ativo">Consultor IA</a></li>
+            </ul>
+            <div id="nav-usuario">
+                <a href="login.html">Entrar</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="consultor">
+
+            <div class="consultor-header">
+                <h2>🤖 Consultor IA</h2>
+                <p>Assistente especializado em economia e finanças da Ontrack · </p>
+                <button id="btn-limpar" onclick="limparConversa()">🗑️ Limpar conversa</button>
+            </div>
+
+            <!-- mensagens da conversa -->
+            <div class="chat-container" id="chat-container">
+
+                <div class="mensagem mensagem-ia">
+                    <div class="mensagem-avatar">🤖</div>
+                    <div class="mensagem-conteudo">
+                        <p>Olá! Sou o consultor financeiro do OnTrack. Como posso ajudar você hoje?</p>
+                        <span class="mensagem-hora" id="hora-inicial"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- área de entrada -->
+            <div class="chat-input-area">
+                <textarea
+                    id="input-mensagem"
+                    placeholder="Digite sua pergunta sobre finanças, investimentos, economia..."
+                    rows="1"
+                ></textarea>
+                <button id="btn-enviar" onclick="enviarMensagem()">
+                    <span id="btn-enviar-texto">Enviar</span>
+                </button>
+            </div>
+
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; Ontrack.</p>
+    </footer>
+
+    <script type="module">
+        import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
+
+        // ============================================================
+        // CONFIGURAÇÃO DO BACK-END
+        // Altere BACKEND_URL quando o servidor Python estiver em outro
+        // host, porta ou caminho (ex.: produção, staging).
+        // ============================================================
+        const BACKEND_URL = 'http://localhost:5000/api/chat';
+
+        // Referência ao usuário logado (Firebase) para enviar uid ao back-end
+        let usuarioLogado = null;
+
+        // navbar dinamica
+        verificarLogin(async (usuario) => {
+            usuarioLogado = usuario;
+
+            const navUsuario = document.getElementById('nav-usuario');
+            if (usuario) {
+                const dados = await buscarDadosUsuario(usuario.uid);
+                const nome = dados?.nome || usuario.displayName || 'Usuário';
+                navUsuario.innerHTML = `
+                    <span class="nav-saudacao">Olá, ${nome}</span>
+                    <a href="perfil.html" class="btn-perfil">Meu perfil</a>
+                    <button id="btn-sair" class="btn-sair">Sair</button>
+                `;
+                document.getElementById('btn-sair').addEventListener('click', async () => {
+                    await logout();
+                    window.location.href = '../index.html';
+                });
+            }
+        });
+
+        // hora incial
+        document.getElementById('hora-inicial').textContent = horaAtual();
+
+        // enviar a msg
+        window.enviarMensagem = async () => {
+            const input = document.getElementById('input-mensagem');
+            const texto = input.value.trim();
+
+            if (!texto) return;
+
+            adicionarMensagem(texto, 'usuario');
+            input.value = '';
+            input.style.height = 'auto';
+
+            const indicador = mostrarIndicador();
+
+            const btn = document.getElementById('btn-enviar');
+            btn.disabled = true;
+            document.getElementById('btn-enviar-texto').textContent = '...';
+
+            try {
+                const resposta = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mensagem: texto,
+                        uid: usuarioLogado?.uid ?? null
+                    })
+                });
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    throw new Error(dados.erro || dados.message || 'Erro no servidor');
+                }
+
+                indicador.remove();
+                renderizarRespostaIA(dados);
+
+            } catch (erro) {
+                indicador.remove();
+                adicionarMensagem('Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.', 'ia');
+                console.error('Erro:', erro);
+            }
+
+            btn.disabled = false;
+            document.getElementById('btn-enviar-texto').textContent = 'Enviar';
+        };
+
+        // interpreta o JSON retornado pelo back-end (tipo: "texto" ou "imagem")
+        function renderizarRespostaIA(dados) {
+            if (dados.tipo === 'texto' && dados.resposta) {
+                adicionarMensagem(dados.resposta, 'ia');
+                return;
+            }
+
+            if (dados.tipo === 'imagem' && dados.url) {
+                adicionarMensagemImagem(dados.url, dados.texto);
+                return;
+            }
+
+            adicionarMensagem('Recebi uma resposta inesperada do servidor. Tente novamente.', 'ia');
+        }
+
+        // adicionar msg de texto
+        function adicionarMensagem(texto, tipo) {
+            const container = document.getElementById('chat-container');
+
+            const div = document.createElement('div');
+            div.classList.add('mensagem', `mensagem-${tipo}`);
+
+            const avatar = tipo === 'ia' ? '🤖' : '👤';
+
+            div.innerHTML = `
+                <div class="mensagem-avatar">${avatar}</div>
+                <div class="mensagem-conteudo">
+                    <p>${formatarTexto(texto)}</p>
+                    <span class="mensagem-hora">${horaAtual()}</span>
+                </div>
+            `;
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // adicionar msg com imagem/gráfico retornado pelo back-end (appendChild — não altera o histórico)
+        function adicionarMensagemImagem(url, texto = '') {
+            const urlSegura = sanitizarUrlImagem(url);
+            if (!urlSegura) {
+                adicionarMensagem('Não foi possível exibir o gráfico retornado pelo servidor.', 'ia');
+                return;
+            }
+
+            const container = document.getElementById('chat-container');
+
+            const div = document.createElement('div');
+            div.classList.add('mensagem', 'mensagem-ia');
+
+            const avatar = document.createElement('div');
+            avatar.classList.add('mensagem-avatar');
+            avatar.textContent = '🤖';
+
+            const conteudo = document.createElement('div');
+            conteudo.classList.add('mensagem-conteudo');
+
+            if (texto) {
+                const paragrafo = document.createElement('p');
+                paragrafo.insertAdjacentHTML('afterbegin', formatarTexto(texto));
+                conteudo.appendChild(paragrafo);
+            }
+
+            const img = document.createElement('img');
+            img.src = urlSegura;
+            img.alt = 'Gráfico gerado pelo consultor';
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '8px';
+            conteudo.appendChild(img);
+
+            const hora = document.createElement('span');
+            hora.classList.add('mensagem-hora');
+            hora.textContent = horaAtual();
+            conteudo.appendChild(hora);
+
+            div.appendChild(avatar);
+            div.appendChild(conteudo);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // barra de digitaçao
+        function mostrarIndicador() {
+            const container = document.getElementById('chat-container');
+
+            const div = document.createElement('div');
+            div.classList.add('mensagem', 'mensagem-ia', 'mensagem-digitando');
+            div.innerHTML = `
+                <div class="mensagem-avatar">🤖</div>
+                <div class="mensagem-conteudo">
+                    <div class="digitando">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div;
+        }
+
+        // limpar a conversa
+        window.limparConversa = () => {
+            const container = document.getElementById('chat-container');
+            container.innerHTML = `
+                <div class="mensagem mensagem-ia">
+                    <div class="mensagem-avatar">🤖</div>
+                    <div class="mensagem-conteudo">
+                        <p>Olá! Sou o consultor financeiro do OnTrack. Como posso ajudar você hoje?</p>
+                        <span class="mensagem-hora">${horaAtual()}</span>
+                    </div>
+                </div>
+            `;
+        };
+
+        // enviar msg com enter
+        document.getElementById('input-mensagem').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                enviarMensagem();
+            }
+        });
+
+        // redimensiona o textarea automaticamente
+        document.getElementById('input-mensagem').addEventListener('input', (e) => {
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+        });
+
+        // funçoes extras
+        function horaAtual() {
+            return new Date().toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(texto) {
+            return String(texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function formatarTexto(texto) {
+            return escapeHtml(texto)
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function sanitizarUrlImagem(url) {
+            try {
+                const parsed = new URL(url, window.location.origin);
+                if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+                return parsed.href;
+            } catch {
+                return null;
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
