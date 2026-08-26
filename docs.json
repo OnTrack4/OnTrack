@@ -5,12 +5,19 @@
   "colors": {
     "primary": "#0052FF"
   },
-  "navigation": [
-    {
-      "group": "Geral",
-      "pages": [
-        "documentacao/introducao"
-      ]
-    }
-  ]
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentação",
+        "groups": [
+          {
+            "group": "Geral",
+            "pages": [
+              "documentacao/introducao"
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }
