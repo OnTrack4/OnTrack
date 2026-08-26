@@ -1,6 +1,10 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "name": "OnTrack Docs",
+  "theme": "mint",
+  "colors": {
+    "primary": "#0052FF"
+  },
   "navigation": [
     {
       "group": "Geral",
