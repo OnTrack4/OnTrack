@@ -1,0 +1,90 @@
+/* perfil*/
+
+.perfil-box,
+.plano-box,
+.investidor-box {
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 12px;
+    padding: 28px;
+    margin-top: 16px;
+}
+
+.perfil-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.perfil-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: var(--azul);
+    color: #fff;
+    font-size: 28px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.perfil-info h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--preto);
+    margin-bottom: 4px;
+}
+
+.perfil-info p {
+    color: var(--cinza-texto);
+    font-size: 15px;
+    margin-bottom: 0;
+}
+
+.perfil-data {
+    font-size: 13px !important;
+    margin-top: 4px;
+}
+
+.plano-atual {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.plano-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 600;
+    width: fit-content;
+}
+
+.badge-basico {
+    background-color: var(--cinza-fundo);
+    color: var(--cinza-texto);
+}
+
+.badge-premium {
+    background-color: var(--azul);
+    color: #fff;
+}
+
+.investidor-resultado {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.investidor-emoji {
+    font-size: 32px;
+}
+
+.investidor-resultado h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--preto);
+}

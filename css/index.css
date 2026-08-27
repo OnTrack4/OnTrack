@@ -1,0 +1,237 @@
+/* titulo */
+
+main > h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--preto);
+    line-height: 1.2;
+    margin-top: 64px;
+    margin-bottom: 16px;
+    max-width: 700px;
+}
+
+main > p {
+    color: var(--cinza-texto);
+    font-size: 17px;
+    max-width: 600px;
+    margin-bottom: 12px;
+}
+
+/* os card */
+
+#recursos .cards,
+#recursos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.card {
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 12px;
+    padding: 24px;
+    flex: 1;
+    min-width: 260px;
+    transition: box-shadow 0.2s;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--preto);
+    margin-bottom: 10px;
+}
+
+.card p {
+    color: var(--cinza-texto);
+    font-size: 15px;
+    margin-bottom: 16px;
+}
+
+.card a {
+    color: var(--azul);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.card a:hover {
+    text-decoration: underline;
+}
+
+/* planos */
+
+#planos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+#planos h2 {
+    width: 100%;
+}
+
+#planos > p {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.plano {
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 12px;
+    padding: 28px;
+    flex: 1;
+    min-width: 260px;
+    transition: box-shadow 0.2s;
+}
+
+.plano:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.plano:last-child {
+    border: 2px solid var(--azul);
+}
+
+.plano h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--preto);
+    margin-bottom: 6px;
+}
+
+/* preço do plano */
+.plano > p {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--azul);
+    margin-bottom: 16px;
+}
+
+.plano ul {
+    margin-bottom: 24px;
+}
+
+.plano ul li {
+    font-size: 15px;
+    color: var(--cinza-texto);
+    padding: 6px 0;
+    padding-left: 16px;
+    position: relative;
+}
+
+/* bolinha azul antes de cada item */
+.plano ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--azul);
+}
+
+.plano a {
+    display: block;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+/* botao do  plano basico */
+.plano:first-of-type a {
+    border: 1px solid var(--cinza-borda);
+    color: var(--preto);
+}
+
+.plano:first-of-type a:hover {
+    background-color: var(--cinza-fundo);
+}
+
+/* botão plano premium */
+.plano:last-child a {
+    background-color: var(--azul);
+    color: var(--branco);
+}
+
+.plano:last-child a:hover {
+    background-color: #0f4a82;
+}
+
+/* formulario de contanto conosco*/
+
+#contato form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 560px;
+}
+
+#contato label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--preto);
+    margin-bottom: -8px;
+}
+
+#contato input,
+#contato textarea {
+    padding: 12px 14px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--preto);
+    background-color: var(--branco);
+    transition: border-color 0.2s;
+}
+
+#contato input:focus,
+#contato textarea:focus {
+    outline: none;
+    border-color: var(--azul);
+}
+
+#contato textarea {
+    height: 140px;
+    resize: vertical; /* usuario pode redimensionar verticalmente */
+}
+
+#contato button {
+    align-self: flex-start;
+    background-color: var(--azul);
+    color: var(--branco);
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#contato button:hover {
+    background-color: #0f4a82;
+}
+
+@media (max-width: 768px) {
+
+    main > h1 {
+        font-size: 28px;
+    }
+
+    .card,
+    .plano {
+        min-width: 100%;
+    }
+}

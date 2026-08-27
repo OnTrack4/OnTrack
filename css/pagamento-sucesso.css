@@ -1,0 +1,28 @@
+/* ===========================
+   PAGAMENTO SUCESSO
+=========================== */
+
+.sucesso-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 80px 24px;
+    gap: 16px;
+}
+
+.sucesso-icone {
+    font-size: 64px;
+}
+
+.sucesso-box h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--preto);
+}
+
+.sucesso-box p {
+    font-size: 17px;
+    color: var(--cinza-texto);
+    max-width: 400px;
+}

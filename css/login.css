@@ -1,0 +1,118 @@
+/* o login */
+
+.login-box {
+    max-width: 400px;
+    margin: 64px auto;
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 16px;
+    padding: 36px;
+}
+
+.login-box h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.login-box > p {
+    color: var(--cinza-texto);
+    font-size: 15px;
+    margin-bottom: 24px;
+}
+
+.login-box form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-box label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--preto);
+    margin-bottom: -6px;
+}
+
+.login-box input {
+    padding: 11px 14px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.login-box input:focus {
+    outline: none;
+    border-color: var(--azul);
+}
+
+.login-box form a {
+    font-size: 13px;
+    text-align: right;
+    color: var(--azul);
+}
+
+.login-box form button {
+    background-color: var(--azul);
+    color: var(--branco);
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 4px;
+}
+
+.login-box form button:hover {
+    background-color: #0f4a82;
+}
+
+/* divisor "ou" */
+.login-box > div > p,
+.login-box > div:last-child > p:first-of-type {
+    text-align: center;
+    color: var(--cinza-texto);
+    font-size: 13px;
+    margin: 14px 0;
+    position: relative;
+}
+
+/* botao dogoogle */
+#btn-google,
+#btn-google-registro {
+    width: 100%;
+    padding: 11px;
+    background-color: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: var(--preto);
+}
+
+#btn-google:hover,
+#btn-google-registro:hover {
+    background-color: var(--cinza-fundo);
+}
+
+/* texto de termos */
+.login-box > div > p:last-child {
+    font-size: 12px;
+    color: var(--cinza-texto);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+
+    .login-box {
+        margin: 32px 16px;
+        padding: 24px;
+    }
+}
