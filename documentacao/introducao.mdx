@@ -1,6 +1,54 @@
 ---
-title: 'Introdução'
-description: 'Documentação do OnTrack'
+title: 'Introdução ao OnTrack'
+description: 'Documentação oficial da plataforma de acompanhamento do mercado financeiro e consultor inteligente.'
 ---
 
-Página em construção.
+## Sobre o OnTrack
+
+O **OnTrack** é uma plataforma desenvolvida para simplificar a análise e o acompanhamento do mercado financeiro brasileiro (B3). A aplicação une cotações de ativos em tempo real com um agente consultor baseado em inteligência artificial.
+
+<CardGroup cols={2}>
+  <Card title="Consultor Financeiro IA" icon="robot">
+    Agente inteligente integrado à API do Google Gemini para respostas contextuais e análises personalizadas.
+  </Card>
+  <Card title="Dados & Gráficos da B3" icon="chart-line">
+    Integração em tempo real via `yfinance` e geração dinâmica de gráficos de preços com `matplotlib`.
+  </Card>
+</CardGroup>
+
+---
+
+## Arquitetura do Sistema
+
+A aplicação é dividida em dois componentes principais que se comunicam via API REST:
+
+1. **Front-end Web:**
+   * Desenvolvido com HTML5, CSS3 e JavaScript.
+   * Interface interativa para envio de mensagens, solicitação de análises e renderização de gráficos.
+
+2. **Back-end Python (Flask):**
+   * **`app.py`:** Servidor HTTP responsável por expor as rotas da API (como a rota `/chat`), tratar requisições HTTP POST e gerenciar o CORS.
+   * **`agente.py`:** Núcleo do agente de inteligência artificial que interage com a API do Gemini, busca históricos de ações via `yfinance` (adicionando a extensão `.SA` aos ativos da B3) e salva as imagens dos gráficos no diretório `static/graficos/`.
+
+---
+
+## Recursos e Dependências
+
+* **Python & Flask:** Estrutura e rotas da aplicação web.
+* **Google GenAI (Gemini API):** Processamento de linguagem natural do consultor.
+* **yfinance:** Leitura de histórico de preços, variações e cotações das ações brasileiras.
+* **matplotlib:** Renderização e salvamento dos gráficos financeiros no servidor.
+
+---
+
+## Configuração do Ambiente Local
+
+ Para rodar a aplicação localmente no seu computador:
+
+1. **Ative o seu ambiente virtual Python (`venv`):**
+   ```bash
+   python -m venv venv
+   # No Linux/macOS:
+   source venv/bin/activate
+   # No Windows:
+   .\venv\Scripts\activate
