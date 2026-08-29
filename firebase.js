@@ -1,6 +1,5 @@
-// ===========================
-// CONFIGURAÇÃO DO FIREBASE
-// ===========================
+// configuraçao do firebase
+
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -21,9 +20,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// ===========================
-// REGISTRAR USUÁRIO
-// ===========================
+
+// registrar o usuario 
+
 
 async function registrarUsuario(nome, email, senha) {
     try {
@@ -46,9 +45,9 @@ async function registrarUsuario(nome, email, senha) {
     }
 }
 
-// ===========================
-// LOGIN COM EMAIL E SENHA
-// ===========================
+
+// login com email e senha
+
 
 async function loginEmailSenha(email, senha) {
     try {
@@ -59,9 +58,9 @@ async function loginEmailSenha(email, senha) {
     }
 }
 
-// ===========================
-// LOGIN COM GOOGLE
-// ===========================
+
+// login como google
+
 
 async function loginGoogle() {
     try {
@@ -89,26 +88,26 @@ async function loginGoogle() {
     }
 }
 
-// ===========================
-// LOGOUT
-// ===========================
+
+// sair(lougout)
+
 
 async function logout() {
     await signOut(auth);
     window.location.href = "../index.html";
 }
 
-// ===========================
-// VERIFICAR SE ESTÁ LOGADO
-// ===========================
+
+// ver se esta logado
+
 
 function verificarLogin(callback) {
     onAuthStateChanged(auth, callback);
 }
 
-// ===========================
-// BUSCAR DADOS DO USUARIO
-// ===========================
+
+// procurar dados do usuario no firebse
+
 
 async function buscarDadosUsuario(uid) {
     const docRef = doc(db, "usuarios", uid);
@@ -119,9 +118,9 @@ async function buscarDadosUsuario(uid) {
     return null;
 }
 
-// ===========================
+
 // VERIFICAR PLANO DO USUARIO
-// ===========================
+
 
 async function verificarPlano(uid) {
     const dados = await buscarDadosUsuario(uid);

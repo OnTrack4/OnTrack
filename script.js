@@ -1,6 +1,6 @@
-// ===========================
-// CONFIGURAÇÃO DA API
-// ===========================
+
+// configuraçao da api em noticias
+
 
 const API_KEY = '8cf0046413e4f1c9d04e835b31377c49';
 const NOTICIAS_POR_PAGINA = 10;
@@ -9,9 +9,9 @@ let paginaAtual = 1;
 let termoBusca = 'economia';
 let totalPaginas = 1;
 
-// ===========================
-// BUSCAR E MOSTRAR NOTICIAS
-// ===========================
+
+// buscar e mostrar as noticias
+
 
 async function carregarNoticias() {
 
@@ -78,9 +78,9 @@ async function carregarNoticias() {
     }
 }
 
-// ===========================
-// PAGINACAO
-// ===========================
+
+// paginacao das noticias
+
 
 function atualizarPaginacao() {
     const paginacao = document.getElementById('paginacao');
@@ -123,9 +123,9 @@ function atualizarPaginacao() {
     }
 }
 
-// ===========================
-// PESQUISA
-// ===========================
+
+// pesquisa noticias
+
 
 function pesquisar() {
     const input = document.getElementById('input-busca');
@@ -149,9 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ===========================
+
 // ABAS DO LOGIN
-// ===========================
+
 
 if (document.getElementById('aba-registro')) {
     document.getElementById('aba-registro').style.display = 'none';
@@ -172,9 +172,9 @@ function mostrarAba(aba) {
     }
 }
 
-// ===========================
-// RODAR SÓ NA PAGINA DE NOTICIAS
-// ===========================
+
+// RODAR So na pagina de noticia
+
 
 if (document.getElementById('lista-noticias')) {
     carregarNoticias();
