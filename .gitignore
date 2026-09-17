@@ -15,3 +15,6 @@ __pycache__/
 # Arquivos do sistema / IDE
 .DS_Store
 .vscode/
+
+# Estado de execução do agente (contador de cota)
+back-end/uso_gemini.json*

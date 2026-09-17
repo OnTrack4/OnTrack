@@ -184,8 +184,8 @@
                     Olá! Como posso <span class="mint">ajudar seus investimentos</span> hoje?
                 </h1>
                 <p class="boas-vindas-subtitulo">
-                    Analise ações da B3, fundos imobiliários, relatórios CVM e projeções macroeconômicas consolidadas
-                    em tempo real.
+                    Analise ações da B3, fundos imobiliários, relatórios CVM e projeções macroeconômicas com apoio de
+                    IA, a partir de fontes públicas.
                 </p>
             </section>
 
@@ -280,7 +280,7 @@
                                 stroke-width="2" stroke-linecap="round">
                                 <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                             </svg>
-                            B3 Real-time Data
+                            Fontes públicas + IA
                         </span>
                         <span class="badge-mint">
                             <!-- icone de busca -->
@@ -291,7 +291,7 @@
                             </svg>
                             Busca Web Ativa
                         </span>
-                        <span class="badge-latencia">● Latência B3: 12ms</span>
+                        <span class="badge-latencia">● Estimativas por IA</span>
                     </div>
 
                     <input class="composer-input" type="text"
@@ -338,6 +338,7 @@
 
                 <p class="disclaimer">
                     O OnTrack consultor de estrateg IA sintetiza dados públicos da B3 e relatórios da Economatica.
+                    Respostas e gráficos são estimativas geradas por IA — não são cotações oficiais em tempo real.
                 </p>
             </section>
 
@@ -445,9 +446,16 @@
         chatSecao.hidden = false;
         chatSecao.innerHTML = '';
 
-        mensagens.forEach(m => {
-            if (m.tipo === 'imagem' && m.url) chatAdicionarImagem(m.url, m.texto, m.hora);
-            else chatAdicionarTexto(m.papel === 'usuario' ? 'usuario' : 'ia', m.texto, m.hora);
+        mensagens.forEach((m, indice) => {
+            if (m.tipo === 'imagem' && m.url) {
+                chatAdicionarImagem(m.url, m.texto, m.hora);
+                return;
+            }
+            // se a resposta anterior ficou sem cota, reapresenta o botão de reenvio
+            const pergunta = m.podeReenviar
+                ? (mensagens.slice(0, indice).reverse().find(x => x.papel === 'usuario') || {}).texto
+                : null;
+            chatAdicionarTexto(m.papel === 'usuario' ? 'usuario' : 'ia', m.texto, m.hora, pergunta);
         });
 
         chatSecao.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -535,8 +543,15 @@
                     mensagens.push({ papel: 'ia', texto: 'Não foi possível exibir o gráfico retornado pelo servidor.', hora: horaAtual() });
                 }
             } else if (dados.tipo === 'texto' && dados.resposta) {
-                chatAdicionarTexto('ia', dados.resposta);
-                mensagens.push({ papel: 'ia', texto: dados.resposta, hora: horaAtual() });
+                // cota esgotada/limite de uso: permite reenviar sem redigitar a pergunta
+                const podeReenviar = dados.pode_reenviar === true;
+                chatAdicionarTexto('ia', dados.resposta, null, podeReenviar ? texto : null);
+                mensagens.push({
+                    papel: 'ia',
+                    texto: dados.resposta,
+                    hora: horaAtual(),
+                    podeReenviar,
+                });
             } else {
                 chatAdicionarTexto('ia', 'Recebi uma resposta inesperada do servidor. Tente novamente.');
                 mensagens.push({ papel: 'ia', texto: 'Recebi uma resposta inesperada do servidor. Tente novamente.', hora: horaAtual() });
@@ -556,7 +571,7 @@
     }
 
     // ---------- helpers de render (mesmos padrões visuais do consultor) ----------
-    function chatAdicionarTexto(tipo, texto, hora = null) {
+    function chatAdicionarTexto(tipo, texto, hora = null, perguntaParaReenviar = null) {
         const div = document.createElement('div');
         div.className = 'mensagem ' + (tipo === 'usuario' ? 'mensagem-usuario' : 'mensagem-ia');
         div.style.cssText = 'display:flex;gap:12px;margin-bottom:18px;' +
@@ -582,6 +597,25 @@
 
         conteudo.appendChild(p);
         conteudo.appendChild(horaSpan);
+
+        if (tipo === 'ia' && perguntaParaReenviar) {
+            const btnReenviar = document.createElement('button');
+            btnReenviar.type = 'button';
+            btnReenviar.textContent = 'Tentar novamente';
+            btnReenviar.style.cssText = 'margin-top:10px;padding:7px 14px;border-radius:999px;' +
+                'border:1px solid #1b4d3d;background-color:#0d2233;color:#2ee6a8;font-size:12.5px;' +
+                'font-weight:600;font-family:inherit;cursor:pointer;';
+            btnReenviar.addEventListener('click', () => {
+                if (enviando) return;
+                btnReenviar.disabled = true;
+                btnReenviar.textContent = 'Reenviando...';
+                btnReenviar.style.opacity = '0.6';
+                btnReenviar.style.cursor = 'default';
+                enviarParaConsultor(perguntaParaReenviar);
+            });
+            conteudo.appendChild(btnReenviar);
+        }
+
         div.appendChild(avatar);
         div.appendChild(conteudo);
         chatSecao.appendChild(div);

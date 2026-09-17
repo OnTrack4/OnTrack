@@ -5,51 +5,115 @@ description: "Documentação oficial da plataforma de acompanhamento do mercado 
 
 ## Sobre o OnTrack
 
-O **OnTrack** é uma plataforma desenvolvida para simplificar a análise e o acompanhamento do mercado financeiro brasileiro (B3). A aplicação une cotações de ativos em tempo real com um agente consultor baseado em inteligência artificial.
+O **OnTrack** é uma plataforma para análise e acompanhamento do mercado financeiro brasileiro (B3). A aplicação combina um site interativo com um agente consultor baseado em inteligência artificial, que responde perguntas sobre economia, renda fixa, ações e fundos imobiliários e gera gráficos sob demanda.
 
 <CardGroup cols={2}>
   <Card title="Consultor Financeiro IA" icon="robot">
-    Agente inteligente integrado à API do Google Gemini para respostas contextuais e análises personalizadas.
+    Agente integrado à API do Google Gemini, com memória de conversa por usuário e respostas contextuais.
   </Card>
 
-  <Card title="Dados & Gráficos da B3" icon="chart-line">
-    Integração em tempo real via `Economatica `e geração dinâmica de gráficos de preços com `matplotlib`.
+  <Card title="Gráficos sob demanda" icon="chart-line">
+    O agente monta os dados solicitados e renderiza os gráficos com `matplotlib`, salvando os arquivos para exibição no chat.
   </Card>
 </CardGroup>
+
+<Warning>
+  Os valores dos gráficos são montados a partir do conhecimento do modelo de IA e de conteúdo público do blog da Economatica — **não** são cotações oficiais em tempo real. Use-os como apoio à análise, nunca como fonte única para decisões de investimento.
+</Warning>
 
 ---
 
 ## Arquitetura do Sistema
 
-A aplicação é dividida em dois componentes principais que se comunicam via API REST:
+O projeto tem duas partes que rodam **na mesma porta**: o Flask entrega tanto os arquivos do site quanto a API.
 
-1. **Front-end Web:**
-   - Desenvolvido com HTML5, CSS3 e JavaScript.
-   - Interface interativa para envio de mensagens, solicitação de análises e renderização de gráficos.
-2. **Back-end Python (Flask):**
-   - **`app.py`:** Servidor HTTP responsável por expor as rotas da API (como a rota `/chat`), tratar requisições HTTP POST e gerenciar o CORS.
-   - **`agente.py`:** Núcleo do agente de inteligência artificial que interage com a API do Gemini, busca históricos de ações via `yfinance` (adicionando a extensão `.SA` aos ativos da B3) e salva as imagens dos gráficos no diretório `static/graficos/`.
+1. **Frontend (HTML5, CSS3 e JavaScript):**
+   - Arquivos estáticos na raiz do projeto: `index.html`, `style.css`, `script.js`, `css/`, `paginas/` e `assets/`.
+   - Autenticação e dados de usuário com Firebase (`firebase.js`).
+   - Interface de chat, cards de sugestão, feed de notícias e páginas internas.
+2. **Backend Python (Flask):**
+   - **`app.py`:** servidor HTTP que entrega os arquivos do site, expõe a API (`POST /api/chat` e `GET /api/health`), serve os gráficos em `/static/graficos/` e habilita CORS para as requisições do frontend.
+   - **`agente.py`:** núcleo do agente de IA. Chama a API do Gemini via HTTP, mantém memória de conversa por usuário (arquivos `memoria_<uid>.json` em `back-end/`), busca contexto público no blog da Economatica (`insight.economatica.com`) e gera os gráficos com `matplotlib`.
+
+---
+
+## Rotas principais
+
+| Rota | Método | Descrição |
+| --- | --- | --- |
+| `/` | GET | Página inicial (`index.html`) |
+| `/paginas/<pagina>.html` | GET | Páginas internas (consultor, notícias, perfil, login...) |
+| `/api/chat` | POST | Recebe `{"mensagem": "...", "uid": "..."}` e devolve texto ou gráfico |
+| `/api/health` | GET | Verificação de saúde da API |
+| `/static/graficos/<arquivo>` | GET | Imagens dos gráficos gerados pelo agente |
 
 ---
 
 ## Recursos e Dependências
 
-- **Python & Flask:** Estrutura e rotas da aplicação web.
-- **Google GenAI (Gemini API):** Processamento de linguagem natural do consultor.
-- **economatica:** Leitura de histórico de preços, variações e cotações das ações brasileiras.
-- **matplotlib:** Renderização e salvamento dos gráficos financeiros no servidor.
+- **Python + Flask (`flask`, `flask-cors`):** estrutura do servidor que entrega o site e as rotas da API.
+- **Google Gemini API:** processamento de linguagem natural do consultor, chamada via `requests` com a chave `GEMINI_API_KEY`.
+- **python-dotenv:** leitura das variáveis de ambiente do arquivo `back-end/.env`.
+- **matplotlib:** renderização e salvamento dos gráficos financeiros no servidor.
+
+<Note>
+  A integração com a Economatica (cotações e históricos oficiais) ainda **não** está ativa: o contexto atual vem apenas do blog público da plataforma. O pacote `economatica` consta no `requirements.txt`, mas não é importado pelo código. O plano de migração está descrito em `back-end/DOCS_ECONOMATICA.md`.
+</Note>
 
 ---
 
 ## Configuração do Ambiente Local
 
-Para rodar a aplicação localmente no seu computador:
+Para rodar a aplicação localmente no seu computador, execute os passos a seguir a partir da raiz do projeto.
 
-1. **Ative o seu ambiente virtual Python (`venv`):**
+1. **Crie e ative o ambiente virtual Python (`venv`):**
+
    ```bash
-   python -m venv venv
-   # No Linux/macOS:
-   source venv/bin/activate
-   # No Windows:
-   .\venv\Scripts\activate
+   python -m venv back-end/venv
+
+   # Windows (CMD):
+   back-end\venv\Scripts\activate.bat
+   # Windows (PowerShell):
+   .\back-end\venv\Scripts\Activate.ps1
+   # Linux / macOS:
+   source back-end/venv/bin/activate
    ```
+
+2. **Instale as dependências:**
+
+   ```bash
+   pip install -r back-end/requirements.txt
+   ```
+
+3. **Configure as variáveis de ambiente** — crie o `back-end/.env` a partir do modelo e informe a chave do Gemini:
+
+   ```bash
+   # Windows:
+   copy back-end\.env.example back-end\.env
+   # Linux / macOS:
+   cp back-end/.env.example back-end/.env
+   ```
+
+   ```
+   GEMINI_API_KEY=sua_chave_aqui
+   ```
+
+4. **Inicie a aplicação:**
+
+   ```bash
+   python back-end/app.py
+   ```
+
+   Saída esperada no terminal:
+
+   ```
+   OnTrack rodando em http://localhost:5000
+    * Serving Flask app 'app'
+    * Debug mode: on
+   ```
+
+5. **Acesse** [http://localhost:5000](http://localhost:5000). O site completo e a API ficam disponíveis nessa mesma porta — não é necessário subir nenhum servidor separado para o frontend. Para encerrar, use `Ctrl+C` no terminal.
+
+<Note>
+  A porta 5000 é fixa no `app.py` e está referenciada no frontend (`BACKEND_URL` em `index.html` e `paginas/consultor.html`). Se precisar trocá-la, ajuste os três pontos.
+</Note>
