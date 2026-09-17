@@ -8,6 +8,11 @@
     <!-- oque eu pesquisei e bem desnecessario mas deixa, vai que alguem usa o edge ne-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- para o site funcionar bem no cell-->
     <title>OnTrack - Inteligência Financeira</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="css/index.css">
 
@@ -17,128 +22,329 @@
 
 <body>
 
-    <!-- abrir o cabeçalho e deixar clicavel-->
-    <header>
-        <nav>
-            <ul>
-                <li><a href="#">Início</a></li>
-                <li><a href="#recursos">Recursos</a></li>
-                <li><a href="#dicas">Dicas</a></li>
-                <li><a href="#ferramentas">Ferramentas</a></li>
-                <li><a href="#contato">Contato</a></li>
-                <li><a href="paginas/consultor.html">Consultor IA</a></li>
-            </ul>
+    <!-- ====================== SIDEBAR ESQUERDA ====================== -->
+    <aside class="sidebar">
 
-            <div id="nav-usuario">
-                <a href="paginas/login.html">Entrar</a>
+        <div class="sidebar-topo">
+            <a class="logo" href="index.html" title="OnTrack">
+                <span class="logo-icone">
+                    <!-- icone de grafico da marca -->
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v18h18" />
+                        <path d="M7 14l4-4 3 3 5-6" />
+                    </svg>
+                </span>
+                On<span class="logo-destaque">Track</span>
+            </a>
+
+            <div class="sidebar-marca">
+                <span class="sidebar-marca-nome">OnTrack</span>
+                <button class="sidebar-toggle" type="button" aria-label="Recolher sidebar">
+                    <!-- icone de painel lateral -->
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M9 3v18" />
+                    </svg>
+                </button>
             </div>
+        </div>
 
+        <button class="btn-novo-chat" type="button">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round">
+                <path d="M12 5v14M5 12h14" />
+            </svg>
+            Novo Chat
+        </button>
+
+        <nav class="sidebar-nav">
+            <a class="nav-link" href="paginas/noticia.html">
+                <!-- icone de jornal -->
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+                    <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+                </svg>
+                Feed de Notícias B3
+            </a>
+            <a class="nav-link" href="paginas/consultor.html">
+                <!-- icone de grafico -->
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="m19 9-5 5-4-4-3 3" />
+                </svg>
+                Gráficos &amp; Cotações
+            </a>
+            <a class="nav-link" href="paginas/perfil.html">
+                <!-- icone de usuario -->
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M5 21c0-3.5 3.1-6 7-6s7 2.5 7 6" />
+                </svg>
+                Área do Usuário
+            </a>
         </nav>
-    </header>
 
-    <main>
-        <!-- titulo e paragrafos-->
+        <!-- âncoras preservadas: outras páginas do projeto apontam para index.html#recursos etc. -->
+        <span id="recursos"></span><span id="dicas"></span><span id="ferramentas"></span><span
+            id="contato"></span><span id="planos"></span>
 
+        <div class="conversas">
+            <span class="conversas-titulo">CONVERSAS RECENTES</span>
 
-        <h1>Bem-vindo ao OnTrack - Inteligência Financeira</h1>
-        <p>Descubra como a inteligência financeira pode transformar sua vida financeira. Com o OnTrack, você pode
-            aprender a
-            gerenciar suas finanças de forma inteligente, tomar decisões financeiras informadas e alcançar seus
-            objetivos
-            financeiros.</p>
-        <p>Explore nossos recursos, dicas e ferramentas para melhorar sua saúde financeira e alcançar a liberdade
-            financeira
-            que você merece.</p>
+            <div id="lista-conversas">
+                <!-- preenchido pelo script com o historico real do usuario -->
+                <p class="conversa-vazia" id="conversas-vazia"
+                    style="padding: 12px; font-size: 13px; color: #5c6b84;">Nenhuma conversa recente</p>
+            <a class="conversa-item" href="paginas/consultor.html">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>Carteira recomendada FIIs</span>
+            </a>
+            </div>
+        </div>
 
-        <!-- deixar titulos em h2 e etc e conectar com o cabeçalho para ser enviando para ca usado os id-->
-        <!-- criar card para depois resolver no css, so o do primeiro ta bom-->
-        <section id="recursos">
-            <h2>O que o OnTrack faz por você</h2>
+        <!-- perfil do usuario no rodape da sidebar -->
+        <div class="perfil">
+            <span class="perfil-avatar" id="perfil-avatar"></span>
+            <div class="perfil-info">
+                <span class="perfil-nome" id="perfil-nome">Visitante</span>
+                <span class="perfil-plano" id="perfil-plano">Conta Gratuita</span>
+                <!-- o script do firebase preenche este espaco quando existe login -->
+                <span hidden id="nav-usuario"></span>
+                <a class="nav-link" id="perfil-login-link" href="paginas/login.html" style="display: none; padding: 6px 12px; margin-top: 8px; font-size: 12px;">Fazer login</a>
+            </div>
+            <button class="perfil-config" type="button" aria-label="Configurações">
+                <!-- icone de engrenagem -->
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </button>
+        </div>
 
-            <div class="card">
-                <h3>Análise de mercado</h3>
-                <p>Nossa IA monitora ações e fundos em tempo real e identifica as melhores tendências.</p>
+    </aside>
+
+    <!-- ====================== ÁREA PRINCIPAL ====================== -->
+    <div class="principal">
+
+        <!-- ====================== TOPBAR ====================== -->
+        <header class="topbar">
+
+            <div class="topbar-esquerda">
+                <button class="seletor-modelo" type="button">
+                    <span class="status-dot"></span>
+                    OnTrack Pro Finance
+                    <!-- icone de seta para baixo -->
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m6 9 6 6 6-6" />
+                    </svg>
+                </button>
             </div>
 
-            <div class="card">
-                <h3>Leitura de notícias</h3>
-                <p>Analisamos o impacto de notícias políticas e econômicas nos seus investimentos.</p>
-                <a href="paginas/noticia.html">Ver notícias ao vivo →</a>
+            <div class="topbar-direita">
+                <span class="ticker">
+                    IBOV <span class="ticker-valor">+0.84%</span>
+                </span>
+                <span class="ticker">
+                    DÓLAR <span class="ticker-valor">R$ 5.42</span>
+                </span>
+                <button class="icon-btn" type="button" aria-label="Notificações">
+                    <!-- icone de sino -->
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                </button>
+                <span class="topbar-avatar" id="topbar-avatar"></span>
             </div>
 
-            <div class="card">
-                <h3>Carteira personalizada</h3>
-                <p>Recomendações feitas de acordo com o seu perfil de risco e objetivos financeiros.</p>
-            </div>
+        </header>
 
-        </section>
+        <!-- ====================== CONTEÚDO CENTRAL ====================== -->
+        <main class="conteudo">
 
-        <section id="dicas">
-            <h2>Dicas</h2>
-            <p>Aprenda estratégias práticas para investir melhor e proteger o seu patrimônio.</p>
-        </section>
+            <section class="boas-vindas">
+                <div class="boas-vindas-icone">
+                    <!-- icone de brilho/estrela -->
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+                        <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z" />
+                    </svg>
+                </div>
 
-        <section id="ferramentas">
-            <h2>Ferramentas</h2>
-            <p>Simuladores, gráficos e relatórios personalizados para acompanhar seus investimentos.</p>
-        </section>
+                <h1 class="boas-vindas-titulo">
+                    Olá! Como posso <span class="mint">ajudar seus investimentos</span> hoje?
+                </h1>
+                <p class="boas-vindas-subtitulo">
+                    Analise ações da B3, fundos imobiliários, relatórios CVM e projeções macroeconômicas consolidadas
+                    em tempo real.
+                </p>
+            </section>
 
-        <!-- abrir uma seçao de planos e mandar para a aba de pagamento-->
-        <section id="planos">
-            <h2>Escolha seu plano</h2>
+            <section class="sugestoes" aria-label="Sugestões de análise">
+                <div class="sugestoes-grid">
 
-            <div class="plano">
-                <h3>Básico</h3>
-                <p>Gratuito</p>
-                <ul>
-                    <li>Orientações essenciais de investimento</li>
-                    <li>Análise básica de ações</li>
-                    <li>Acesso ao painel principal</li>
-                </ul>
-                <a href="paginas/login.html">Começar grátis</a>
-            </div>
+                    <button class="sugestao-card" type="button">
+                        <div class="sugestao-topo">
+                            <span class="sugestao-icone">
+                                <!-- icone de grafico -->
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 3v18h18" />
+                                    <path d="m19 9-5 5-4-4-3 3" />
+                                </svg>
+                            </span>
+                            <span class="pill">PETR4</span>
+                        </div>
+                        <h3>Analisar histórico da PETR4</h3>
+                        <p>Múltiplos de valuation, payout de dividendos e projeções trimestrais.</p>
+                    </button>
 
-            <div class="plano">
-                <h3>Premium</h3>
-                <p>R$ ??/mês</p>
-                <ul>
-                    <li>Tudo do plano Básico</li>
-                    <li>Resumos de notícias políticas e econômicas</li>
-                    <li>Análise profunda de tendências</li>
-                    <li>Carteira personalizada completa</li>
-                </ul>
-                <a href="paginas/pagamento.html">Assinar Premium</a>
-            </div>
+                    <button class="sugestao-card" type="button">
+                        <div class="sugestao-topo">
+                            <span class="sugestao-icone">
+                                <!-- icone de calendario/noticia -->
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                    <path d="M8 2v4M16 2v4M3 10h18" />
+                                </svg>
+                            </span>
+                            <span class="pill">Mercado Hoje</span>
+                        </div>
+                        <h3>Principais notícias da B3</h3>
+                        <p>Resumo do fechamento do Ibovespa, Selic e movimentações dos grandes players.</p>
+                    </button>
 
-        </section>
+                    <button class="sugestao-card" type="button">
+                        <div class="sugestao-topo">
+                            <span class="sugestao-icone">
+                                <!-- icone de pizza/grafico de pizza -->
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                                    <path d="M22 12A10 10 0 0 1 12 2v10z" />
+                                </svg>
+                            </span>
+                            <span class="pill">Alocação</span>
+                        </div>
+                        <h3>Carteira diversificada 2025</h3>
+                        <p>Equilíbrio estratégico entre Ações, FIIs, Renda Fixa IPCA+ e exterior.</p>
+                    </button>
 
-        <!-- abrir um seçao de contato caso alguem queira entrar em contanto sobre algo, nao se esqueça de abrir um formulario para deixar bonitinho-->
-        <section id="contato">
-            <h2>Contato</h2>
-            <p>Tem alguma dúvida? Fale com a nossa equipe.</p>
+                    <button class="sugestao-card" type="button">
+                        <div class="sugestao-topo">
+                            <span class="sugestao-icone">
+                                <!-- icone de relatorio -->
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <path d="M14 2v6h6M9 13h6M9 17h6" />
+                                </svg>
+                            </span>
+                            <span class="pill">VALE3</span>
+                        </div>
+                        <h3>Explicar relatório da VALE3</h3>
+                        <p>Destaques operacionais sobre minério, guidance de Ebitda e dividend yield.</p>
+                    </button>
 
-            <form>
-                <label for="nome">Nome:</label>
-                <input type="text" id="nome" name="nome" required>
+                </div>
 
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
+                <div class="atalhos">
+                    <span class="atalhos-rotulo">RÁPIDO:</span>
+                    <button class="atalho" type="button">BBAS3 vs ITUB4</button>
+                    <button class="atalho" type="button">FIIs Logísticos</button>
+                    <button class="atalho" type="button">Copom &amp; Renda Fixa</button>
+                </div>
+            </section>
 
-                <label for="mensagem">Mensagem:</label>
-                <textarea id="mensagem" name="mensagem" required></textarea>
+            <!-- ====================== CONVERSA (CHAT) ====================== -->
+            <section class="chat" id="chat-secao" hidden></section>
 
-                <button type="submit">Enviar</button>
-            </form>
+            <!-- ====================== CAMPO DE MENSAGEM ====================== -->
+            <section class="composer">
+                <div class="composer-caixa">
 
-        </section>
+                    <div class="composer-badges">
+                        <span class="badge-mint">
+                            <!-- icone de globo -->
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                            </svg>
+                            B3 Real-time Data
+                        </span>
+                        <span class="badge-mint">
+                            <!-- icone de busca -->
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.3-4.3" />
+                            </svg>
+                            Busca Web Ativa
+                        </span>
+                        <span class="badge-latencia">● Latência B3: 12ms</span>
+                    </div>
 
-    </main>
+                    <input class="composer-input" type="text"
+                        placeholder="Pergunte sobre ações B3, FIIs, balanços, relatórios CVM ou estratégias...">
 
-    <footer>
-        <p>&copy; 2026 OnTrack nao sei oque falar aquir</p>
-        <p> mexer aqui e bem engraçado</p>
+                    <div class="composer-acoes">
+                        <div class="composer-ferramentas">
+                            <button class="icon-btn" type="button" aria-label="Anexar arquivo">
+                                <!-- icone de clipe -->
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.19 9.19a2 2 0 0 1-2.83-2.83l9.19-9.19" />
+                                </svg>
+                            </button>
+                            <button class="icon-btn" type="button" aria-label="Upload de imagem">
+                                <!-- icone de imagem -->
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    <circle cx="9" cy="9" r="2" />
+                                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                                </svg>
+                            </button>
+                            <button class="icon-btn" type="button" aria-label="Ditar mensagem">
+                            <!-- icone de microfone -->
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="2" width="6" height="12" rx="3" />
+                                <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8" />
+                            </svg>
+                        </button>
+                    </div>
 
-    </footer>
+                    <span class="composer-dica">Pressione <kbd>Enter ↵</kbd> para enviar</span>
+
+                    <button class="btn-consultar" type="button">Consultar
+                        <!-- icone de seta para cima -->
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                            stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 19V5M5 12l7-7 7 7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="disclaimer">
+                    O OnTrack consultor de estrateg IA sintetiza dados públicos da B3 e relatórios da Economatica.
+                </p>
+            </section>
+
+        </main>
+
+    </div>
 
     <script type="module">
     import { verificarLogin, buscarDadosUsuario, logout } from './firebase.js';
@@ -171,6 +377,381 @@
         }
     });
 </script>
+
+    <script type="module">
+    import { verificarLogin, buscarDadosUsuario } from './firebase.js';
+
+    // ============================================================
+    // CONSULTOR IA NO INDEX — mesma API usada em paginas/consultor.html
+    // ============================================================
+    const BACKEND_URL = 'http://localhost:5000/api/chat';
+
+    // ---------- referências de tela ----------
+    const chatSecao = document.getElementById('chat-secao');
+    const boasVindas = document.querySelector('.boas-vindas');
+    const sugestoes = document.querySelector('.sugestoes');
+    const input = document.querySelector('.composer-input');
+    const listaConversas = document.getElementById('lista-conversas');
+
+    // ---------- estado ----------
+    let usuarioUid = null;
+    let conversaAtual = null;
+    let mensagens = [];
+    let enviando = false;
+
+    // ---------- persistência do histórico (localStorage por usuário) ----------
+    const chaveHistorico = () =>
+        usuarioUid ? `ontrack_conversas_${usuarioUid}` : 'ontrack_conversas_visitante';
+
+    function carregarConversas() {
+        try {
+            return JSON.parse(localStorage.getItem(chaveHistorico())) || [];
+        } catch {
+            return [];
+        }
+    }
+
+    function salvarConversas(lista) {
+        try {
+            localStorage.setItem(chaveHistorico(), JSON.stringify(lista.slice(0, 30)));
+        } catch { /* quota cheia — ignora */ }
+    }
+
+    function gerarTitulo(texto) {
+        const t = String(texto).replace(/\s+/g, ' ').trim();
+        return t.length > 38 ? t.slice(0, 38) + '…' : (t || 'Nova conversa');
+    }
+
+    function novaConversa() {
+        conversaAtual = null;
+        mensagens = [];
+        chatSecao.hidden = true;
+        chatSecao.innerHTML = '';
+        boasVindas.hidden = false;
+        sugestoes.hidden = false;
+        input.value = '';
+    }
+
+    // ---------- renderização da conversa aberta ----------
+    function abrirConversa(id) {
+        const lista = carregarConversas();
+        const c = lista.find(x => x.id === id);
+        if (!c) return;
+
+        conversaAtual = id;
+        mensagens = c.mensagens || [];
+
+        boasVindas.hidden = true;
+        sugestoes.hidden = true;
+        chatSecao.hidden = false;
+        chatSecao.innerHTML = '';
+
+        mensagens.forEach(m => {
+            if (m.tipo === 'imagem' && m.url) chatAdicionarImagem(m.url, m.texto, m.hora);
+            else chatAdicionarTexto(m.papel === 'usuario' ? 'usuario' : 'ia', m.texto, m.hora);
+        });
+
+        chatSecao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function persistirConversa() {
+        if (!mensagens.length) return;
+        const lista = carregarConversas();
+        const titulo = gerarTitulo(mensagens[0].texto);
+
+        if (conversaAtual) {
+            const c = lista.find(x => x.id === conversaAtual);
+            if (c) { c.mensagens = mensagens; c.atualizadaEm = Date.now(); }
+        } else {
+            conversaAtual = 'c' + Date.now();
+            lista.unshift({ id: conversaAtual, titulo, mensagens, atualizadaEm: Date.now() });
+        }
+        salvarConversas(lista);
+        renderizarListaConversas();
+    }
+
+    function renderizarListaConversas() {
+        if (!listaConversas) return;
+        const lista = carregarConversas();
+
+        if (!lista.length) {
+            // estado vazio: nenhum dado falso
+            listaConversas.innerHTML =
+                '<p class="conversa-vazia" id="conversas-vazia" style="padding: 12px; font-size: 13px; color: #5c6b84;">Nenhuma conversa recente</p>';
+            return;
+        }
+
+        listaConversas.innerHTML = lista.map(c => {
+            const rotulo = escapeHtml(String(c.titulo || 'Conversa'));
+            return `<a class="conversa-item" href="#" data-conversa="${escapeHtml(String(c.id))}">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>${rotulo}</span>
+            </a>`;
+        }).join('');
+
+        listaConversas.querySelectorAll('[data-conversa]').forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                abrirConversa(a.getAttribute('data-conversa'));
+            });
+        });
+    }
+
+    // ---------- envio de mensagem ao consultor (mesmo contrato do consultor.html) ----------
+    async function enviarParaConsultor(texto) {
+        if (enviando) return;
+        enviando = true;
+
+        boasVindas.hidden = true;
+        sugestoes.hidden = true;
+        chatSecao.hidden = false;
+
+        chatAdicionarTexto('usuario', texto);
+        mensagens.push({ papel: 'usuario', texto, hora: horaAtual() });
+
+        const indicador = mostrarIndicador();
+
+        try {
+            const resposta = await fetch(BACKEND_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mensagem: texto, uid: usuarioUid })
+            });
+
+            const dados = await resposta.json();
+            indicador.remove();
+
+            if (!resposta.ok) throw new Error(dados.erro || dados.message || 'Erro no servidor');
+
+            if (dados.tipo === 'imagem' && dados.url) {
+                const urlSegura = sanitizarUrlImagem(dados.url);
+                if (urlSegura) {
+                    chatAdicionarImagem(urlSegura, dados.texto || '');
+                    mensagens.push({ papel: 'ia', tipo: 'imagem', url: urlSegura, texto: dados.texto || '', hora: horaAtual() });
+                } else {
+                    chatAdicionarTexto('ia', 'Não foi possível exibir o gráfico retornado pelo servidor.');
+                    mensagens.push({ papel: 'ia', texto: 'Não foi possível exibir o gráfico retornado pelo servidor.', hora: horaAtual() });
+                }
+            } else if (dados.tipo === 'texto' && dados.resposta) {
+                chatAdicionarTexto('ia', dados.resposta);
+                mensagens.push({ papel: 'ia', texto: dados.resposta, hora: horaAtual() });
+            } else {
+                chatAdicionarTexto('ia', 'Recebi uma resposta inesperada do servidor. Tente novamente.');
+                mensagens.push({ papel: 'ia', texto: 'Recebi uma resposta inesperada do servidor. Tente novamente.', hora: horaAtual() });
+            }
+
+            persistirConversa();
+
+        } catch (erro) {
+            indicador.remove();
+            chatAdicionarTexto('ia', 'Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.');
+            mensagens.push({ papel: 'ia', texto: 'Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.', hora: horaAtual() });
+            persistirConversa();
+            console.error('Erro:', erro);
+        }
+
+        enviando = false;
+    }
+
+    // ---------- helpers de render (mesmos padrões visuais do consultor) ----------
+    function chatAdicionarTexto(tipo, texto, hora = null) {
+        const div = document.createElement('div');
+        div.className = 'mensagem ' + (tipo === 'usuario' ? 'mensagem-usuario' : 'mensagem-ia');
+        div.style.cssText = 'display:flex;gap:12px;margin-bottom:18px;' +
+            (tipo === 'usuario' ? 'flex-direction:row-reverse;' : '');
+
+        const avatar = document.createElement('div');
+        avatar.textContent = tipo === 'usuario' ? '👤' : '🤖';
+        avatar.style.cssText = 'width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;' +
+            (tipo === 'usuario' ? 'background:linear-gradient(135deg,#1b4d3d,#0f2f4d);' : 'background:#0d2233;border:1px solid #1b4d3d;');
+
+        const conteudo = document.createElement('div');
+        conteudo.style.cssText = 'max-width:75%;padding:14px 18px;border-radius:16px;font-size:14.5px;line-height:1.6;' +
+            (tipo === 'usuario' ? 'background:linear-gradient(135deg,#34e3a1,#19b98a);color:#04120c;border-bottom-right-radius:4px;' : 'background:#0a0f1c;border:1px solid #131c2e;color:#e6ebf3;border-bottom-left-radius:4px;');
+
+        const p = document.createElement('p');
+        p.style.margin = '0';
+        p.innerHTML = formatarTexto(texto);
+
+        const horaSpan = document.createElement('span');
+        horaSpan.textContent = hora || horaAtual();
+        horaSpan.style.cssText = 'display:block;margin-top:6px;font-size:11px;opacity:.55;' +
+            (tipo === 'usuario' ? 'text-align:right;' : '');
+
+        conteudo.appendChild(p);
+        conteudo.appendChild(horaSpan);
+        div.appendChild(avatar);
+        div.appendChild(conteudo);
+        chatSecao.appendChild(div);
+        chatSecao.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function chatAdicionarImagem(url, texto, hora = null) {
+        const div = document.createElement('div');
+        div.className = 'mensagem mensagem-ia';
+        div.style.cssText = 'display:flex;gap:12px;margin-bottom:18px;';
+
+        const avatar = document.createElement('div');
+        avatar.textContent = '🤖';
+        avatar.style.cssText = 'width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:#0d2233;border:1px solid #1b4d3d;';
+
+        const conteudo = document.createElement('div');
+        conteudo.style.cssText = 'max-width:75%;padding:14px 18px;border-radius:16px;background:#0a0f1c;border:1px solid #131c2e;color:#e6ebf3;border-bottom-left-radius:4px;';
+
+        if (texto) {
+            const p = document.createElement('p');
+            p.style.margin = '0 0 8px';
+            p.innerHTML = formatarTexto(texto);
+            conteudo.appendChild(p);
+        }
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'Gráfico gerado pelo consultor';
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        conteudo.appendChild(img);
+
+        const horaSpan = document.createElement('span');
+        horaSpan.textContent = hora || horaAtual();
+        horaSpan.style.cssText = 'display:block;margin-top:6px;font-size:11px;opacity:.55;';
+        conteudo.appendChild(horaSpan);
+
+        div.appendChild(avatar);
+        div.appendChild(conteudo);
+        chatSecao.appendChild(div);
+        chatSecao.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function mostrarIndicador() {
+        const div = document.createElement('div');
+        div.className = 'mensagem mensagem-ia mensagem-digitando';
+        div.style.cssText = 'display:flex;gap:12px;margin-bottom:18px;';
+
+        const avatar = document.createElement('div');
+        avatar.textContent = '🤖';
+        avatar.style.cssText = 'width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:#0d2233;border:1px solid #1b4d3d;';
+
+        const conteudo = document.createElement('div');
+        conteudo.style.cssText = 'padding:14px 18px;border-radius:16px;background:#0a0f1c;border:1px solid #131c2e;';
+        conteudo.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ee6a8;margin:0 2px;animation:pulsar-dot 1s infinite;"></span>' +
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ee6a8;margin:0 2px;animation:pulsar-dot 1s .2s infinite;"></span>' +
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ee6a8;margin:0 2px;animation:pulsar-dot 1s .4s infinite;"></span>';
+
+        div.appendChild(avatar);
+        div.appendChild(conteudo);
+        chatSecao.appendChild(div);
+        chatSecao.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        return div;
+    }
+
+    // ---------- utilitários (mesmos nomes/padrões do consultor.html) ----------
+    function horaAtual() {
+        return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(texto) {
+        return String(texto)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function formatarTexto(texto) {
+        return escapeHtml(texto)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+    }
+
+    function sanitizarUrlImagem(url) {
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+            return parsed.href;
+        } catch {
+            return null;
+        }
+    }
+
+    // ---------- eventos da interface ----------
+    function enviarDoInput() {
+        const texto = (input.value || '').trim();
+        if (!texto || enviando) return;
+        input.value = '';
+        enviarParaConsultor(texto);
+    }
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            enviarDoInput();
+        }
+    });
+
+    document.querySelector('.btn-consultar').addEventListener('click', enviarDoInput);
+
+    // cards de sugestão e atalhos preenchem o campo e enviam
+    document.querySelectorAll('.sugestao-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const titulo = card.querySelector('h3')?.textContent?.trim();
+            if (titulo) enviarParaConsultor(titulo);
+        });
+    });
+    document.querySelectorAll('.atalho').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const texto = btn.textContent.trim();
+            if (texto) enviarParaConsultor(texto);
+        });
+    });
+
+    // "Novo Chat" abre uma conversa em branco
+    document.querySelector('.btn-novo-chat').addEventListener('click', novaConversa);
+
+    // ---------- inicialização: dados dinâmicos do usuário ----------
+    function aplicarDadosUsuario(nome, plano) {
+        const iniciais = String(nome).trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase() || 'U';
+
+        // perfil da sidebar
+        document.getElementById('perfil-nome').textContent = nome;
+        document.getElementById('perfil-avatar').textContent = iniciais;
+        document.getElementById('perfil-plano').textContent = plano === 'premium' ? 'Plano Pro B3' : 'Plano Gratuito';
+
+        // avatar da topbar
+        const elAvatarTopo = document.getElementById('topbar-avatar');
+ if (elAvatarTopo) elAvatarTopo.textContent = iniciais;
+    }
+
+    function aplicarVisitante() {
+        document.getElementById('perfil-nome').textContent = 'Visitante';
+        document.getElementById('perfil-avatar').textContent = '?';
+        document.getElementById('perfil-plano').textContent = 'Conta Gratuita';
+
+        const elAvatarTopo = document.getElementById('topbar-avatar');
+        if (elAvatarTopo) elAvatarTopo.textContent = '?';
+
+        const elLogin = document.getElementById('perfil-login-link');
+        if (elLogin) elLogin.style.display = 'inline-flex';
+    }
+
+    verificarLogin(async (usuario) => {
+        if (usuario) {
+            usuarioUid = usuario.uid;
+            const dados = await buscarDadosUsuario(usuario.uid);
+            const nome = dados?.nome || usuario.displayName || 'Usuário';
+            const plano = dados?.plano || 'basico';
+            aplicarDadosUsuario(nome, plano);
+        } else {
+            // visitante: saudação genérica + botão de login, sem dados fictícios
+            aplicarVisitante();
+        }
+        renderizarListaConversas();
+    });
+    </script>
 
 </body>
 

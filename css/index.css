@@ -1,237 +1,837 @@
-/* titulo */
+/* ============================================================
+   ONTRACK — ESTILOS EXCLUSIVOS DA PÁGINA INDEX (DASHBOARD IA)
+   Paleta: dark navy + verde mint. Carrega depois do style.css.
+   ============================================================ */
 
-main > h1 {
-    font-size: 42px;
-    font-weight: 700;
-    color: var(--preto);
-    line-height: 1.2;
-    margin-top: 64px;
-    margin-bottom: 16px;
-    max-width: 700px;
-}
+/* ---------- base ---------- */
 
-main > p {
-    color: var(--cinza-texto);
-    font-size: 17px;
-    max-width: 600px;
-    margin-bottom: 12px;
-}
-
-/* os card */
-
-#recursos .cards,
-#recursos {
+body {
     display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
+    background-color: #05080f;
+    color: #e6ebf3;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-.card {
-    background-color: var(--branco);
-    border: 1px solid var(--cinza-borda);
-    border-radius: 12px;
-    padding: 24px;
+/* neutraliza o header/global do style.css nesta página */
+body > header {
+    display: none;
+}
+
+/* ---------- layout geral ---------- */
+
+.principal {
     flex: 1;
-    min-width: 260px;
-    transition: box-shadow 0.2s;
-}
-
-.card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.card h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--preto);
-    margin-bottom: 10px;
-}
-
-.card p {
-    color: var(--cinza-texto);
-    font-size: 15px;
-    margin-bottom: 16px;
-}
-
-.card a {
-    color: var(--azul);
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.card a:hover {
-    text-decoration: underline;
-}
-
-/* planos */
-
-#planos {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    align-items: flex-start;
-}
-
-#planos h2 {
-    width: 100%;
-}
-
-#planos > p {
-    width: 100%;
-    margin-bottom: 0;
-}
-
-.plano {
-    background-color: var(--branco);
-    border: 1px solid var(--cinza-borda);
-    border-radius: 12px;
-    padding: 28px;
-    flex: 1;
-    min-width: 260px;
-    transition: box-shadow 0.2s;
-}
-
-.plano:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.plano:last-child {
-    border: 2px solid var(--azul);
-}
-
-.plano h3 {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--preto);
-    margin-bottom: 6px;
-}
-
-/* preço do plano */
-.plano > p {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--azul);
-    margin-bottom: 16px;
-}
-
-.plano ul {
-    margin-bottom: 24px;
-}
-
-.plano ul li {
-    font-size: 15px;
-    color: var(--cinza-texto);
-    padding: 6px 0;
-    padding-left: 16px;
-    position: relative;
-}
-
-/* bolinha azul antes de cada item */
-.plano ul li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 14px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background-color: var(--azul);
-}
-
-.plano a {
-    display: block;
-    text-align: center;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-
-/* botao do  plano basico */
-.plano:first-of-type a {
-    border: 1px solid var(--cinza-borda);
-    color: var(--preto);
-}
-
-.plano:first-of-type a:hover {
-    background-color: var(--cinza-fundo);
-}
-
-/* botão plano premium */
-.plano:last-child a {
-    background-color: var(--azul);
-    color: var(--branco);
-}
-
-.plano:last-child a:hover {
-    background-color: #0f4a82;
-}
-
-/* formulario de contanto conosco*/
-
-#contato form {
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    max-width: 560px;
+    height: 100vh;
+    height: 100dvh;
 }
 
-#contato label {
+.conteudo {
+    flex: 1;
+    max-width: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px 40px;
+    gap: 32px;
+}
+
+/* neutraliza padding/borda que o style.css aplica a sections */
+.conteudo section {
+    padding: 0;
+    border-bottom: none;
+}
+
+/* ---------- sidebar ---------- */
+
+.sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    height: 100vh;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #060a14;
+    border-right: 1px solid #131c2e;
+    padding: 18px 14px 14px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #1e2a44 transparent;
+}
+
+.sidebar-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px 18px;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.2px;
+}
+
+.logo-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: #2ee6a8;
+    background-color: #0d2233;
+    border: 1px solid #1b3a4d;
+}
+
+.logo-destaque {
+    color: #2ee6a8;
+}
+
+/* segunda marca da sidebar (ao lado do logo) */
+.sidebar-marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #eef2f8;
+}
+
+.sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #6c7b93;
+    cursor: pointer;
+}
+
+.sidebar-toggle:hover {
+    color: #eef2f8;
+    background-color: #0d1626;
+}
+
+/* botão + novo chat */
+
+.btn-novo-chat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border: 1px solid #1a2438;
+    border-radius: 999px;
+    background-color: #0a1120;
+    color: #e6ebf3;
     font-size: 14px;
-    font-weight: 500;
-    color: var(--preto);
-    margin-bottom: -8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
-#contato input,
-#contato textarea {
-    padding: 12px 14px;
-    border: 1px solid var(--cinza-borda);
-    border-radius: 8px;
-    font-size: 15px;
-    font-family: inherit;
-    color: var(--preto);
-    background-color: var(--branco);
-    transition: border-color 0.2s;
+.btn-novo-chat:hover {
+    background-color: #0d1626;
+    border-color: #263651;
 }
 
-#contato input:focus,
-#contato textarea:focus {
-    outline: none;
-    border-color: var(--azul);
+/* ---------- navegação da sidebar ---------- */
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    max-width: none;
+    margin: 0 0 26px;
+    padding: 0;
 }
 
-#contato textarea {
-    height: 140px;
-    resize: vertical; /* usuario pode redimensionar verticalmente */
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 999px;
+    color: #8b99b0;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
 }
 
-#contato button {
+.nav-link:hover {
+    color: #e6ebf3;
+    background-color: #0a1120;
+}
+
+.nav-link.ativo {
+    background: linear-gradient(135deg, #34e3a1, #19b98a);
+    color: #04120c;
+}
+
+/* ---------- conversas recentes ---------- */
+
+.conversas {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 26px;
+    margin-bottom: 18px;
+}
+
+.conversas-titulo {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    color: #5c6b84;
+    padding: 0 12px 10px;
+}
+
+.conversa-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    color: #93a1b8;
+    font-size: 13.5px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.conversa-item:hover {
+    color: #e6ebf3;
+    background-color: #0a1120;
+}
+
+.conversa-item svg {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+/* ---------- perfil (rodapé da sidebar) ---------- */
+
+.perfil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #131c2e;
+    border-radius: 14px;
+    background-color: #070c17;
+    margin-top: auto;
+}
+
+.perfil-avatar {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #134e4a, #0f2f4d);
+    color: #2ee6a8;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.perfil-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+    min-width: 0;
+    flex: 1;
+}
+
+.perfil-nome {
+    font-size: 14px;
+    font-weight: 600;
+    color: #eef2f8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.perfil-plano {
+    display: inline-flex;
     align-self: flex-start;
-    background-color: var(--azul);
-    color: var(--branco);
-    padding: 12px 28px;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
+    margin-top: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background-color: #0d2233;
+    border: 1px solid #1b4d3d;
+    color: #2ee6a8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ---------- topbar ---------- */
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 26px;
+    background-color: #05080f;
+    border-bottom: 1px solid #0b1120;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.topbar-esquerda,
+.topbar-direita {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* seletor de modelo */
+
+.seletor-modelo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border: 1px solid #16223a;
+    border-radius: 999px;
+    background-color: #0a1120;
+    color: #eef2f8;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
-#contato button:hover {
-    background-color: #0f4a82;
+.seletor-modelo:hover {
+    background-color: #0d1626;
 }
 
-@media (max-width: 768px) {
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #2ee6a8;
+}
 
-    main > h1 {
-        font-size: 28px;
+.seletor-modelo svg {
+    color: #6c7b93;
+}
+
+/* tickers */
+
+.ticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid #16223a;
+    border-radius: 999px;
+    background-color: #0a1120;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.ticker-valor {
+    color: #2ee6a8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+}
+
+.topbar-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1b4d3d, #0f2f4d);
+    color: #d7f5e9;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* botões de ícone genéricos */
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: #8b99b0;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.icon-btn:hover {
+    color: #eef2f8;
+    background-color: #0d1626;
+}
+
+/* ---------- boas-vindas ---------- */
+
+.boas-vindas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 28px;
+    max-width: 760px;
+}
+
+.boas-vindas-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 26px;
+    border-radius: 18px;
+    color: #2ee6a8;
+    background-color: #0d2233;
+    border: 1px solid #1b4d3d;
+    box-shadow: 0 0 42px rgba(46, 230, 168, 0.22);
+}
+
+.boas-vindas-titulo {
+    font-size: 44px;
+    font-weight: 800;
+    color: #f2f5fa;
+    line-height: 1.15;
+    letter-spacing: -0.8px;
+    margin-bottom: 18px;
+    max-width: 680px;
+}
+
+.boas-vindas-titulo .mint {
+    color: #34e3a1;
+}
+
+.boas-span {
+    color: #4ea8de;
+}
+
+.boas-vindas-subtitulo {
+    font-size: 17px;
+    color: #8b99b0;
+    max-width: 640px;
+}
+
+/* ---------- grid de sugestões ---------- */
+
+.sugestoes {
+    width: 100%;
+    max-width: 940px;
+}
+
+.sugestoes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.sugestao-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 22px;
+    border: 1px solid #131c2e;
+    border-radius: 18px;
+    background-color: #0a0f1c;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
+}
+
+.sugestao-card:hover {
+    border-color: #24405e;
+    background-color: #0c1220;
+    transform: translateY(-2px);
+}
+
+.sugestao-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 18px;
+}
+
+.sugestao-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    color: #2ee6a8;
+    background-color: #0d2233;
+    border: 1px solid #1b3a4d;
+}
+
+.sugestao-card h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #eef2f8;
+    margin-bottom: 8px;
+}
+
+.sugestao-card p {
+    font-size: 14px;
+    color: #8b99b0;
+    line-height: 1.55;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2ee6a8;
+    background-color: #0d2233;
+    border: 1px solid #1b4d3d;
+}
+
+/* pills/ícones em azul (carteira e mercado, como na referência) */
+.sugestao-card:nth-child(2) .pill,
+.sugestao-card:nth-child(3) .pill {
+    color: #4ea8de;
+    background-color: #0d1b33;
+    border-color: #1e3a5f;
+}
+
+.sugestao-card:nth-child(3) .sugestao-icone {
+    color: #4ea8de;
+    background-color: #0d1b33;
+    border-color: #1e3a5f;
+}
+
+.lat-dot {
+    color: #2ee6a8;
+}
+
+/* ---------- atalhos rápidos ---------- */
+
+.atalhos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 26px;
+}
+
+.atalhos-rotulo {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.1px;
+    color: #5c6b84;
+    margin-right: 6px;
+}
+
+.atalho {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid #16223a;
+    border-radius: 999px;
+    background-color: #0a1120;
+    color: #b7c2d4;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.atalho::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #4ea8de;
+}
+
+.atalho:hover {
+    color: #fff;
+    background-color: #0d1626;
+    border-color: #263651;
+}
+
+/* primeiro atalho com bolinha mint, como na referência */
+.atalho:first-of-type::before {
+    background-color: #2ee6a8;
+}
+
+/* ---------- composer (campo de mensagem) ---------- */
+
+.composer {
+    width: 100%;
+    max-width: 940px;
+    margin-top: auto;
+}
+
+.composer-caixa {
+    border: 1px solid #16223a;
+    border-radius: 20px;
+    background-color: #0a0f1c;
+    padding: 16px 18px 14px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.composer-badges {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.badge-mint {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border: 1px solid #1b4d3d;
+    border-radius: 999px;
+    background-color: #0d2233;
+    color: #2ee6a8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge-latencia {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #8b99b0;
+}
+
+/* ---------- input e ações do composer ---------- */
+
+.composer-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background-color: #0d1526;
+    color: #eef2f8;
+    font-size: 15px;
+    font-family: inherit;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.composer-input::placeholder {
+    color: #5c6b84;
+}
+
+.composer-input:focus {
+    outline: none;
+    border-color: #1b4d3d;
+    background-color: #0f1a2e;
+}
+
+.composer-acoes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.composer-ferramentas {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.composer-dica {
+    margin-left: auto;
+    font-size: 13px;
+    color: #6c7b93;
+}
+
+.composer-dica kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #94a3b8;
+    background-color: #131c2e;
+    border: 1px solid #1e2a44;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin: 0 4px;
+}
+
+.btn-consultar {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #34e3a1, #19b98a);
+    color: #04120c;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.2s, transform 0.2s;
+}
+
+.btn-consultar:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+/* ---------- disclaimer ---------- */
+
+.disclaimer {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: #5c6b84;
+}
+
+/* ---------- utilitários / compatibilidade ---------- */
+
+/* o script do firebase injeta "Olá, {nome}" etc. — mantém discreto */
+#nav-usuario {
+    display: contents;
+}
+
+.nav-saudacao,
+.btn-perfil,
+.btn-sair {
+    font-size: 13px;
+}
+.btn-sair {
+    background: transparent;
+    border: 1px solid #1e2a44;
+    color: #8b99b0;
+    padding: 4px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.mint {
+    color: #34e3a1;
+}
+
+/* âncoras invisíveis dos links antigos (index.html#recursos etc.) */
+#recursos,
+#dicas,
+#ferramentas,
+#contato,
+#planos {
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    display: block;
+}
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 1024px) {
+    .sugestoes-grid {
+        grid-template-columns: 1fr;
     }
 
-    .card,
-    .plano {
-        min-width: 100%;
+    .boas-vindas-titulo {
+        font-size: 34px;
+    }
+}
+
+@media (max-width: 900px) {
+    body {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        border-right: none;
+        border-bottom: 1px solid #131c2e;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        padding: 14px;
+    }
+
+    .sidebar-topo {
+        width: 100%;
+        padding-bottom: 0;
+    }
+
+    .btn-novo-chat {
+        width: auto;
+        margin-bottom: 0;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin-bottom: 0;
+    }
+
+    .conversas,
+    .perfil {
+        margin-top: 0;
+    }
+
+    .conversas {
+        display: none;
+    }
+
+    .principal {
+        height: auto;
+    }
+
+    .conteudo {
+        height: auto;
+        overflow: visible;
+    }
+
+    .boas-vindas-titulo {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 560px) {
+    .topbar-direita .ticker {
+        display: none;
+    }
+
+    .boas-vindas-titulo {
+        font-size: 24px;
+    }
+
+    .composer-dica {
+        display: none;
     }
 }
