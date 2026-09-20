@@ -1,434 +1,8 @@
-<!DOCTYPE html>
 
-<html lang="pt-br"> <!-- define que o idioma e portugues-->
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <!-- oque eu pesquisei e bem desnecessario mas deixa, vai que alguem usa o edge ne-->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- para o site funcionar bem no cell-->
-    <title>OnTrack - Inteligência Financeira</title>
-    <!-- logo oficial da marca "AI OnTrack Desde 2026" -->
-    <link rel="icon" type="image/x-icon" href="assets/logo-ontrack.ico">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="css/index.css">
-
-</head>
-
-<!-- vou abrir o corpo do site, e deixar um cabeçalho no começo-->
-
-<body>
-
-    <!-- botão flutuante para trazer a sidebar de volta (o toggle original fica
-         DENTRO dela, então sem isso a barra nunca mais voltaria) -->
-    <button class="btn-mostrar-sidebar" id="btn-mostrar-sidebar" type="button"
-        aria-label="Mostrar sidebar" aria-controls="sidebar">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M9 3v18" />
-        </svg>
-    </button>
-
-    <!-- ====================== SIDEBAR ESQUERDA ====================== -->
-    <aside class="sidebar" id="sidebar">
-
-        <div class="sidebar-topo">
-            <a class="logo" href="index.html" title="OnTrack">
-                <span class="logo-icone">
-                    <!-- logo oficial da marca "AI OnTrack Desde 2026" -->
-                    <img src="assets/logo-ontrack.ico" alt="Logo OnTrack" style="max-width:100%; max-height:100%;">
-                </span>
-                On<span class="logo-destaque">Track</span>
-            </a>
-
-            <div class="sidebar-marca">
-                <span class="sidebar-marca-nome">OnTrack</span>
-                <button class="sidebar-toggle" type="button" id="btn-recolher-sidebar"
-                    aria-label="Recolher sidebar" aria-expanded="true" aria-controls="sidebar">
-                    <!-- icone de painel lateral -->
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <path d="M9 3v18" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <button class="btn-novo-chat" type="button">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2"
-                stroke-linecap="round">
-                <path d="M12 5v14M5 12h14" />
-            </svg>
-            Novo Chat
-        </button>
-
-        <nav class="sidebar-nav">
-            <a class="nav-link" href="paginas/noticia.html">
-                <!-- icone de jornal -->
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
-                    <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
-                </svg>
-                Feed de Notícias 
-            </a>
-            <a class="nav-link" href="paginas/consultor.html">
-                <!-- icone de grafico -->
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 3v18h18" />
-                    <path d="m19 9-5 5-4-4-3 3" />
-                </svg>
-                Gráficos &amp; Cotações
-            </a>
-            <a class="nav-link" href="paginas/perfil.html">
-                <!-- icone de usuario -->
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M5 21c0-3.5 3.1-6 7-6s7 2.5 7 6" />
-                </svg>
-                Área do Usuário
-            </a>
-        </nav>
-
-        <!-- âncoras preservadas: outras páginas do projeto apontam para index.html#recursos etc. -->
-        <span id="recursos"></span><span id="dicas"></span><span id="ferramentas"></span><span
-            id="contato"></span><span id="planos"></span>
-
-        <div class="conversas">
-            <span class="conversas-titulo">CONVERSAS RECENTES</span>
-
-            <div id="lista-conversas">
-                <!-- preenchido pelo script com o historico real do usuario -->
-                <p class="conversa-vazia" id="conversas-vazia"
-                    style="padding: 12px; font-size: 13px; color: #5c6b84;">Nenhuma conversa recente</p>
-            <a class="conversa-item" href="paginas/consultor.html">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>Carteira recomendada FIIs</span>
-            </a>
-            </div>
-        </div>
-
-        <!-- perfil do usuario no rodape da sidebar -->
-        <div class="perfil">
-            <span class="perfil-avatar" id="perfil-avatar"></span>
-            <div class="perfil-info">
-                <span class="perfil-nome" id="perfil-nome">Visitante</span>
-                <span class="perfil-plano" id="perfil-plano">Conta Gratuita</span>
-                <!-- o script do firebase preenche este espaco quando existe login -->
-                <span hidden id="nav-usuario"></span>
-                <a class="nav-link" id="perfil-login-link" href="paginas/login.html" style="display: none; padding: 6px 12px; margin-top: 8px; font-size: 12px;">Fazer login</a>
-            </div>
-            <button class="perfil-config" type="button" id="btn-config-perfil" aria-label="Abrir perfil e configurações">
-                <!-- icone de engrenagem -->
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-            </button>
-        </div>
-
-    </aside>
-
-    <!-- ====================== ÁREA PRINCIPAL ====================== -->
-    <div class="principal">
-
-        <!-- ====================== TOPBAR ====================== -->
-        <header class="topbar">
-
-            <div class="topbar-esquerda">
-                <button class="seletor-modelo" type="button">
-                    <!-- logo oficial da marca "AI OnTrack Desde 2026" -->
-                    <img src="assets/logo-ontrack.ico" alt="Logo OnTrack" style="width:auto; height:18px;">
-                    OnTrack Pro Finance
-                    <!-- icone de seta para baixo -->
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="m6 9 6 6 6-6" />
-                    </svg>
-                </button>
-            </div>
-
-            <div class="topbar-direita">
-                <span class="ticker">
-                     <span class="ticker-valor"></span>
-                </span>
-                <span class="ticker">
-                     <span class="ticker-valor"></span>
-                </span>
-                <button class="icon-btn" type="button" aria-label="Notificações">
-                    <!-- icone de sino -->
-                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                    </svg>
-                </button>
-                <!-- botão de perfil: abre o menu do usuário (acima da topbar, z-index 60) -->
-                <div class="perfil-menu">
-                    <button class="topbar-avatar topbar-avatar-btn" id="topbar-avatar" type="button"
-                        aria-haspopup="true" aria-expanded="false" aria-label="Menu do usuário"></button>
-                    <div class="menu-usuario" id="menu-usuario" role="menu" hidden>
-                        <p class="menu-usuario-cabecalho">
-                            <span class="menu-usuario-nome" id="menu-usuario-nome">Visitante</span>
-                            <span class="menu-usuario-plano" id="menu-usuario-plano">Conta Gratuita</span>
-                        </p>
-                        <a role="menuitem" href="paginas/perfil.html">
-                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="8" r="4" />
-                                <path d="M5 21c0-3.5 3.1-6 7-6s7 2.5 7 6" />
-                            </svg>
-                            Meu perfil
-                        </a>
-                        <a role="menuitem" id="menu-usuario-login" href="paginas/login.html" hidden>
-                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                                <path d="m10 17 5-5-5-5M15 12H3" />
-                            </svg>
-                            Fazer login
-                        </a>
-                        <a role="menuitem" id="menu-usuario-sair" href="#" hidden>
-                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                <path d="m16 17 5-5-5-5M21 12H9" />
-                            </svg>
-                            Sair
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-        </header>
-
-        <!-- ====================== CONTEÚDO CENTRAL ====================== -->
-        <main class="conteudo">
-
-            <section class="boas-vindas">
-                <div class="boas-vindas-icone">
-                    <!-- icone de brilho/estrela -->
-                    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                        <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z" />
-                    </svg>
-                </div>
-
-                <h1 class="boas-vindas-titulo">
-                    Olá! Como posso <span class="mint">ajudar seus investimentos</span> hoje?
-                </h1>
-                <p class="boas-vindas-subtitulo">
-                    Analise ações da B3, fundos imobiliários, relatórios CVM e projeções macroeconômicas com apoio de
-                    IA, a partir de fontes públicas.
-                </p>
-            </section>
-
-            <section class="sugestoes" aria-label="Sugestões de análise">
-                <div class="sugestoes-grid">
-
-                    <button class="sugestao-card" type="button">
-                        <div class="sugestao-topo">
-                            <span class="sugestao-icone">
-                                <!-- icone de grafico -->
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 3v18h18" />
-                                    <path d="m19 9-5 5-4-4-3 3" />
-                                </svg>
-                            </span>
-                            <span class="pill">PETR4</span>
-                        </div>
-                        <h3>Analisar histórico da PETR4</h3>
-                        <p>Múltiplos de valuation, payout de dividendos e projeções trimestrais.</p>
-                    </button>
-
-                    <button class="sugestao-card" type="button">
-                        <div class="sugestao-topo">
-                            <span class="sugestao-icone">
-                                <!-- icone de calendario/noticia -->
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                                    <path d="M8 2v4M16 2v4M3 10h18" />
-                                </svg>
-                            </span>
-                            <span class="pill">Mercado Hoje</span>
-                        </div>
-                        <h3>Principais notícias da B3</h3>
-                        <p>Resumo do fechamento do Ibovespa, Selic e movimentações dos grandes players.</p>
-                    </button>
-
-                    <button class="sugestao-card" type="button">
-                        <div class="sugestao-topo">
-                            <span class="sugestao-icone">
-                                <!-- icone de pizza/grafico de pizza -->
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-                                    <path d="M22 12A10 10 0 0 1 12 2v10z" />
-                                </svg>
-                            </span>
-                            <span class="pill">Alocação</span>
-                        </div>
-                        <h3>Carteira diversificada 2025</h3>
-                        <p>Equilíbrio estratégico entre Ações, FIIs, Renda Fixa IPCA+ e exterior.</p>
-                    </button>
-
-                    <button class="sugestao-card" type="button">
-                        <div class="sugestao-topo">
-                            <span class="sugestao-icone">
-                                <!-- icone de relatorio -->
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <path d="M14 2v6h6M9 13h6M9 17h6" />
-                                </svg>
-                            </span>
-                            <span class="pill">VALE3</span>
-                        </div>
-                        <h3>Explicar relatório da VALE3</h3>
-                        <p>Destaques operacionais sobre minério, guidance de Ebitda e dividend yield.</p>
-                    </button>
-
-                </div>
-
-                <div class="atalhos">
-                    <span class="atalhos-rotulo">RÁPIDO:</span>
-                    <button class="atalho" type="button">BBAS3 vs ITUB4</button>
-                    <button class="atalho" type="button">FIIs Logísticos</button>
-                    <button class="atalho" type="button">Copom &amp; Renda Fixa</button>
-                </div>
-            </section>
-
-            <!-- ====================== CONVERSA (CHAT) ====================== -->
-            <section class="chat" id="chat-secao" hidden></section>
-
-            <!-- ====================== CAMPO DE MENSAGEM ====================== -->
-            <section class="composer">
-                <div class="composer-caixa">
-
-                    <div class="composer-badges">
-                        <span class="badge-mint">
-                            <!-- icone de globo -->
-                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round">
-                                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                            </svg>
-                            Fontes públicas + IA
-                        </span>
-                        <span class="badge-mint">
-                            <!-- icone de busca -->
-                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.3-4.3" />
-                            </svg>
-                            Busca Web Ativa
-                        </span>
-                        <span class="badge-latencia">● Estimativas por IA</span>
-                    </div>
-
-                    <input class="composer-input" type="text"
-                        placeholder="Pergunte sobre ações B3, FIIs, balanços, relatórios CVM ou estratégias...">
-
-                    <div class="composer-acoes">
-                        <div class="composer-ferramentas">
-                            <button class="icon-btn" type="button" aria-label="Anexar arquivo">
-                                <!-- icone de clipe -->
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.19 9.19a2 2 0 0 1-2.83-2.83l9.19-9.19" />
-                                </svg>
-                            </button>
-                            <button class="icon-btn" type="button" aria-label="Upload de imagem">
-                                <!-- icone de imagem -->
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                                    <circle cx="9" cy="9" r="2" />
-                                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                                </svg>
-                            </button>
-                            <button class="icon-btn" type="button" aria-label="Ditar mensagem">
-                            <!-- icone de microfone -->
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="9" y="2" width="6" height="12" rx="3" />
-                                <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <span class="composer-dica">Pressione <kbd>Enter ↵</kbd> para enviar</span>
-
-                    <button class="btn-consultar" type="button">Consultar
-                        <!-- icone de seta para cima -->
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                            stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 19V5M5 12l7-7 7 7" />
-                        </svg>
-                    </button>
-                </div>
-
-                <p class="disclaimer">
-                    O OnTrack consultor de estrateg IA sintetiza dados públicos da B3 e relatórios da Economatica.
-                    Respostas e gráficos são estimativas geradas por IA — não são cotações oficiais em tempo real.
-                </p>
-            </section>
-
-        </main>
-
-    </div>
-
-    <script type="module">
-    import { verificarLogin, buscarDadosUsuario, logout } from './firebase.js';
-
-    verificarLogin(async (usuario) => {
-
-        const navUsuario = document.getElementById('nav-usuario');
-
-        if (usuario) {
-            // usuario logado — busca os dados e mostra na navbar
-            const dados = await buscarDadosUsuario(usuario.uid);
-            const nome = dados?.nome || usuario.displayName || 'Usuário';
-
-            navUsuario.innerHTML = `
-                <span class="nav-saudacao">Olá, ${nome}</span>
-                <a href="paginas/perfil.html" class="btn-perfil">Meu perfil</a>
-                <button id="btn-sair-index" class="btn-sair" type="button">Sair</button>
-            `;
-
-            document.getElementById('btn-sair-index').addEventListener('click', async () => {
-                await logout();
-                window.location.href = 'index.html';
-            });
-
-        } else {
-            // usuario nao logado — mostra o botão de entrar
-            navUsuario.innerHTML = `
-                <a href="paginas/login.html">Entrar</a>
-            `;
-        }
-    });
-</script>
-
-    <script type="module">
     import {
         verificarLogin, buscarDadosUsuario, normalizarMemoria,
         LIMITE_CONVERSAS, salvarConversa, apagarConversa, observarConversas,
-        salvarSessao, observarSessao, logout
+        salvarSessao, observarSessao
     } from './firebase.js';
 
     // ============================================================
@@ -478,7 +52,6 @@
     let listaServidor = [];             // último retorno do servidor
     let migracaoPendente = false;       // enquanto o que só existe aqui está subindo
     let recuperacaoFeita = false;
-    let gravandoConversa = false;       // gravação da conversa aberta em andamento
     // sessão (usuarios/{uid}/historico_chat/sessao): qual conversa está aberta
     let pararDeObservarSessao = null;
     let conversaDaSessao = null;        // o que o servidor diz estar aberto
@@ -497,63 +70,6 @@
         try {
             localStorage.setItem(chaveLocal(), JSON.stringify(conversas.slice(0, LIMITE_CONVERSAS)));
         } catch { /* quota cheia — o Firestore continua sendo a fonte da verdade */ }
-    }
-
-    // A subida do histórico que já existia neste navegador acontece UMA vez por
-    // aparelho. Sem essa trava, recarregar a página depois de você excluir uma
-    // conversa em outro aparelho reenviaria a cópia velha daqui e a conversa voltaria.
-    const chaveMigracao = (uid) => `ontrack_migrado_${uid}`;
-
-    // Ids de conversa criados neste navegador SEM estar logado: só eles precisam subir
-    // numa próxima migração. Guardar os ids (e não um simples "tem novidade") é o que
-    // impede que a cópia velha daqui ressuscite o que você excluiu em outro aparelho.
-    const CHAVE_VISITANTE_NOVOS = 'ontrack_visitante_novos';
-
-    function jaSubiuHistoricoLocal(uid) {
-        try { return localStorage.getItem(chaveMigracao(uid)) === '1'; } catch { return false; }
-    }
-
-    function marcarHistoricoLocalSubiu(uid) {
-        try { localStorage.setItem(chaveMigracao(uid), '1'); } catch { /* sem espelho local */ }
-    }
-
-    function lerNovidadeDeVisitante() {
-        try {
-            const ids = JSON.parse(localStorage.getItem(CHAVE_VISITANTE_NOVOS));
-            return Array.isArray(ids) ? ids.map(String) : [];
-        } catch {
-            return [];
-        }
-    }
-
-    function marcarNovidadeDeVisitante(conversaId) {
-        if (!conversaId) return;
-        try {
-            const ids = lerNovidadeDeVisitante();
-            if (!ids.includes(String(conversaId))) {
-                localStorage.setItem(CHAVE_VISITANTE_NOVOS, JSON.stringify(ids.concat(String(conversaId))));
-            }
-        } catch { /* sem espelho local */ }
-    }
-
-    function desmarcarNovidadeDeVisitante(conversaId) {
-        try {
-            const ids = lerNovidadeDeVisitante().filter(id => id !== String(conversaId));
-            localStorage.setItem(CHAVE_VISITANTE_NOVOS, JSON.stringify(ids));
-        } catch { /* sem espelho local */ }
-    }
-
-    function limparNovidadeDeVisitante() {
-        try { localStorage.removeItem(CHAVE_VISITANTE_NOVOS); } catch { /* sem espelho local */ }
-    }
-
-    // O que deste navegador ainda não está no servidor: na primeira vez, o espelho local
-    // inteiro (histórico de antes do Firestore); depois disso, só o que nasceu sem conta.
-    function conversasParaSubir(uid) {
-        const locais = lerEspelhoLocal().filter(c => c && c.id && c.mensagens?.length);
-        if (!jaSubiuHistoricoLocal(uid)) return locais;
-        const novos = new Set(lerNovidadeDeVisitante());
-        return locais.filter(c => novos.has(String(c.id)));
     }
 
     // ---------- de onde a lista está vindo ----------
@@ -608,23 +124,13 @@
     function aplicarListaServidor(lista) {
         listaServidor = lista;
         if (!migracaoPendente) {
-            // A conversa aberta pode estar no meio de uma gravação: se a resposta do
-            // servidor ainda não a trouxer, ela é preservada aqui. Sem isso ela sumiria
-            // da barra lateral e a próxima mensagem criaria uma conversa duplicada.
-            const aberta = conversaAtual
-                ? conversas.find(c => String(c.id) === String(conversaAtual))
-                : null;
-            const juntas = (gravandoConversa && aberta
-                && !lista.some(c => String(c.id) === String(aberta.id)))
-                ? [aberta].concat(lista).slice(0, LIMITE_CONVERSAS)
-                : lista;
-            aplicarConversas(juntas);
+            aplicarConversas(lista);
             seguirSessaoDoServidor();
             return;
         }
 
         const ids = new Set(lista.map(c => String(c.id)));
-        const pendentes = conversasParaSubir(usuarioUid).filter(c => !ids.has(String(c.id)));
+        const pendentes = lerEspelhoLocal().filter(c => c && c.id && !ids.has(String(c.id)));
         const juntas = pendentes.length
             ? lista.concat(pendentes)
                 .sort((a, b) => Number(b.atualizadaEm || 0) - Number(a.atualizadaEm || 0))
@@ -636,28 +142,25 @@
 
     // sobe para o Firestore o histórico que o usuário já tinha no navegador, ou uma
     // conversa criada sem internet. Compara por atualizadaEm: a versão mais recente vence.
-    // `falhou` separa "não havia nada para subir" de "não deu para subir": sem isso, um
-    // erro de permissão marcaria a migração como concluída e ela nunca tentaria de novo.
     async function enviarConversasPendentes(uid) {
         const porId = new Map(listaServidor.map(c => [String(c.id), c]));
-        const pendentes = conversasParaSubir(uid).filter(c => {
+        const pendentes = lerEspelhoLocal().filter(c => {
+            if (!c || !c.id || !c.mensagens?.length) return false;
             const remota = porId.get(String(c.id));
             return !remota || Number(c.atualizadaEm || 0) > Number(remota.atualizadaEm || 0);
         });
 
         let subiu = false;
-        let falhou = false;
         for (const conversa of pendentes) {
             try {
                 await salvarConversa(uid, conversa);
                 subiu = true;
             } catch (erro) {
-                falhou = true;
                 avisarFalhaHistorico(erro);
                 break;
             }
         }
-        return { subiu, falhou };
+        return subiu;
     }
 
     // ---------- sessão: qual conversa está aberta ----------
@@ -689,9 +192,7 @@
         conversaDaSessao = null;
         seguindoSessao = true;
         atualizarStatusHistorico('conectando');
-        // sobe o histórico antigo deste aparelho na primeira vez e, depois, só o que foi
-        // criado conversando sem conta — nunca a cópia velha de conversas já sincronizadas
-        migracaoPendente = !jaSubiuHistoricoLocal(uid) || lerNovidadeDeVisitante().length > 0;
+        migracaoPendente = true;
 
         // 1) espelho local primeiro: a barra lateral já aparece preenchida
         aplicarConversas(lerEspelhoLocal(), false);
@@ -702,18 +203,14 @@
             if (!migracaoPendente) return;
 
             // 2) primeira resposta do servidor: sobe o que só existe aqui e passa a
-            //    tratar a lista do servidor como a única verdadeira. Se o envio falhar,
-            //    o modo migração fica ligado e tenta de novo na próxima volta.
-            const { falhou } = await enviarConversasPendentes(uid);
-            if (falhou) return;
-
-            migracaoPendente = false;
-            marcarHistoricoLocalSubiu(uid);
-            limparNovidadeDeVisitante();
-            limparAvisoFalhaHistorico();
-            // a lista mostrada já é servidor + o que acabou de subir; o eco do servidor
-            // chega em seguida e redesenha a barra lateral com o estado definitivo
-            seguirSessaoDoServidor();
+            //    tratar a lista do servidor como a única verdadeira
+            const subiu = await enviarConversasPendentes(uid);
+            if (!subiu) {
+                migracaoPendente = false;
+                limparAvisoFalhaHistorico();
+                aplicarConversas(listaServidor);
+                seguirSessaoDoServidor();
+            }
         }, (erro) => {
             migracaoPendente = false;
             avisarFalhaHistorico(erro);
@@ -763,16 +260,18 @@
         boasVindas.hidden = true;
         sugestoes.hidden = true;
         chatSecao.hidden = false;
-        chatSecao.innerHTML = '';            mensagens.forEach((m, indice) => {
-                if (m.tipo === 'imagem' && m.url) {
-                    chatAdicionarImagem(m.url, m.texto, m.hora, m.custo || null);
-                    return;
-                }
+        chatSecao.innerHTML = '';
+
+        mensagens.forEach((m, indice) => {
+            if (m.tipo === 'imagem' && m.url) {
+                chatAdicionarImagem(m.url, m.texto, m.hora);
+                return;
+            }
             // se a resposta anterior ficou sem cota, reapresenta o botão de reenvio
             const pergunta = m.podeReenviar
                 ? (mensagens.slice(0, indice).reverse().find(x => x.papel === 'usuario') || {}).texto
                 : null;
-            chatAdicionarTexto(m.papel === 'usuario' ? 'usuario' : 'ia', m.texto, m.hora, pergunta, m.custo || null);
+            chatAdicionarTexto(m.papel === 'usuario' ? 'usuario' : 'ia', m.texto, m.hora, pergunta);
         });
 
         chatSecao.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -798,16 +297,13 @@
 
         // espelho local na hora: recarregar a página durante a resposta não perde nada
         gravarEspelhoLocal();
-        // sem conta, esta conversa ainda não existe no servidor: sobe no próximo login
-        if (!usuarioUid) marcarNovidadeDeVisitante(conversaAtual);
         renderizarListaConversas();
 
         // o servidor recebe em seguida; falha aqui não interrompe o chat
         if (usuarioUid) {
-            gravandoConversa = true;
             salvarConversa(usuarioUid, conversa)
-                .then(() => { gravandoConversa = false; limparAvisoFalhaHistorico(); })
-                .catch((erro) => { gravandoConversa = false; avisarFalhaHistorico(erro); });
+                .then(limparAvisoFalhaHistorico)
+                .catch(avisarFalhaHistorico);
             // a conversa em uso é a sessão: é o que o outro aparelho vai abrir
             registrarSessao(conversaAtual);
         }
@@ -991,7 +487,6 @@
 
         // sai da tela e do espelho local na hora; o servidor confirma logo abaixo
         conversas = conversas.filter(c => String(c.id) !== String(id));
-        desmarcarNovidadeDeVisitante(id);
         gravarEspelhoLocal();
 
         // era a conversa aberta: volta para a tela inicial do assistente
@@ -1035,7 +530,6 @@
         if (e.key !== 'Escape') return;
         fecharMenuConversa();
         fecharModalExclusao();
-        fecharMenuUsuario();
     });
     document.addEventListener('scroll', fecharMenuConversa, true);
     window.addEventListener('resize', fecharMenuConversa);
@@ -1130,33 +624,31 @@
 
             const dados = await resposta.json();
             indicador.remove();
-            const custo = (dados && dados.custo) || null;
 
             if (!resposta.ok) throw new Error(dados.erro || dados.message || 'Erro no servidor');
 
             if (dados.tipo === 'imagem' && dados.url) {
                 const urlSegura = sanitizarUrlImagem(dados.url);
                 if (urlSegura) {
-                    chatAdicionarImagem(urlSegura, dados.texto || '', null, custo);
-                    mensagens.push({ papel: 'ia', tipo: 'imagem', url: urlSegura, texto: dados.texto || '', hora: horaAtual(), custo });
+                    chatAdicionarImagem(urlSegura, dados.texto || '');
+                    mensagens.push({ papel: 'ia', tipo: 'imagem', url: urlSegura, texto: dados.texto || '', hora: horaAtual() });
                 } else {
-                    chatAdicionarTexto('ia', 'Não foi possível exibir o gráfico retornado pelo servidor.', null, null, custo);
-                    mensagens.push({ papel: 'ia', texto: 'Não foi possível exibir o gráfico retornado pelo servidor.', hora: horaAtual(), custo });
+                    chatAdicionarTexto('ia', 'Não foi possível exibir o gráfico retornado pelo servidor.');
+                    mensagens.push({ papel: 'ia', texto: 'Não foi possível exibir o gráfico retornado pelo servidor.', hora: horaAtual() });
                 }
             } else if (dados.tipo === 'texto' && dados.resposta) {
                 // cota esgotada/limite de uso: permite reenviar sem redigitar a pergunta
                 const podeReenviar = dados.pode_reenviar === true;
-                chatAdicionarTexto('ia', dados.resposta, null, podeReenviar ? texto : null, custo);
+                chatAdicionarTexto('ia', dados.resposta, null, podeReenviar ? texto : null);
                 mensagens.push({
                     papel: 'ia',
                     texto: dados.resposta,
                     hora: horaAtual(),
                     podeReenviar,
-                    custo,
                 });
             } else {
-                chatAdicionarTexto('ia', 'Recebi uma resposta inesperada do servidor. Tente novamente.', null, null, custo);
-                mensagens.push({ papel: 'ia', texto: 'Recebi uma resposta inesperada do servidor. Tente novamente.', hora: horaAtual(), custo });
+                chatAdicionarTexto('ia', 'Recebi uma resposta inesperada do servidor. Tente novamente.');
+                mensagens.push({ papel: 'ia', texto: 'Recebi uma resposta inesperada do servidor. Tente novamente.', hora: horaAtual() });
             }
 
             persistirConversa();
@@ -1183,29 +675,8 @@
         }
     }
 
-    // ---------- medidor de consumo (o backend devolve dados.custo) ----------
-    function rotuloCusto(custo) {
-        const ia = Number(custo?.ia) || 0;
-        const fontes = Number(custo?.fontes) || 0;
-        const partes = [];
-        if (ia > 0) partes.push(ia === 1 ? '1 chamada de IA' : `${ia} chamadas de IA`);
-        if (fontes > 0) partes.push(fontes === 1 ? '1 consulta de mercado' : `${fontes} consultas de mercado`);
-        return partes.join(' · ');
-    }
-
-    // o custo fica discreto, abaixo da resposta, com a descrição completa no title
-    function anexarCusto(conteudo, custo) {
-        const rotulo = rotuloCusto(custo);
-        if (!rotulo) return;
-        const span = document.createElement('span');
-        span.textContent = rotulo;
-        span.title = 'Requisições externas consumidas por esta resposta';
-        span.style.cssText = 'display:block;margin-top:4px;font-size:10.5px;opacity:.45;';
-        conteudo.appendChild(span);
-    }
-
     // ---------- helpers de render (mesmos padrões visuais do consultor) ----------
-    function chatAdicionarTexto(tipo, texto, hora = null, perguntaParaReenviar = null, custo = null) {
+    function chatAdicionarTexto(tipo, texto, hora = null, perguntaParaReenviar = null) {
         const div = document.createElement('div');
         div.className = 'mensagem ' + (tipo === 'usuario' ? 'mensagem-usuario' : 'mensagem-ia');
         div.style.cssText = 'display:flex;gap:12px;margin-bottom:18px;' +
@@ -1231,7 +702,6 @@
 
         conteudo.appendChild(p);
         conteudo.appendChild(horaSpan);
-        if (tipo === 'ia' && custo) anexarCusto(conteudo, custo);
 
         if (tipo === 'ia' && perguntaParaReenviar) {
             const btnReenviar = document.createElement('button');
@@ -1257,7 +727,7 @@
         chatSecao.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
-    function chatAdicionarImagem(url, texto, hora = null, custo = null) {
+    function chatAdicionarImagem(url, texto, hora = null) {
         const div = document.createElement('div');
         div.className = 'mensagem mensagem-ia';
         div.style.cssText = 'display:flex;gap:12px;margin-bottom:18px;';
@@ -1287,7 +757,6 @@
         horaSpan.textContent = hora || horaAtual();
         horaSpan.style.cssText = 'display:block;margin-top:6px;font-size:11px;opacity:.55;';
         conteudo.appendChild(horaSpan);
-        if (custo) anexarCusto(conteudo, custo);
 
         div.appendChild(avatar);
         div.appendChild(conteudo);
@@ -1375,78 +844,6 @@
     // composer no futuro, o envio não pode submeter a página
     document.addEventListener('submit', (e) => e.preventDefault(), true);
 
-    // ---------- recolher/mostrar a barra lateral ----------
-    // Esconde a coluna de conversas e o chat ocupa o espaço livre. O estado fica no
-    // localStorage: recarregar a página não traz a barra de volta contra a escolha.
-    const btnRecolher = document.getElementById('btn-recolher-sidebar');
-    const CHAVE_SIDEBAR = 'ontrack_sidebar_oculta';
-
-    function aplicarSidebarOculta(oculta) {
-        document.body.classList.toggle('sem-sidebar', oculta);
-        if (btnRecolher) {
-            btnRecolher.setAttribute('aria-expanded', String(!oculta));
-            btnRecolher.setAttribute('aria-label', oculta ? 'Mostrar sidebar' : 'Recolher sidebar');
-        }
-    }
-
-    aplicarSidebarOculta(localStorage.getItem(CHAVE_SIDEBAR) === '1');
-
-    function definirSidebarOculta(oculta) {
-        aplicarSidebarOculta(oculta);
-        try {
-            if (oculta) localStorage.setItem(CHAVE_SIDEBAR, '1');
-            else localStorage.removeItem(CHAVE_SIDEBAR);
-        } catch { /* sem localStorage, apenas o estado da tela */ }
-    }
-
-    btnRecolher?.addEventListener('click', () =>
-        definirSidebarOculta(!document.body.classList.contains('sem-sidebar')));
-    document.getElementById('btn-mostrar-sidebar')?.addEventListener('click', () =>
-        definirSidebarOculta(false));
-
-    // ---------- menu do perfil (botão de avatar no topo direito) ----------
-    // Segue o mesmo padrão do menu da conversa: abre no clique, fecha ao clicar
-    // fora ou no Esc. O dropdown fica acima da topbar (z-index 60).
-    const btnAvatar = document.getElementById('topbar-avatar');
-    const menuUsuario = document.getElementById('menu-usuario');
-
-    function fecharMenuUsuario() {
-        if (!menuUsuario || menuUsuario.hidden) return;
-        menuUsuario.hidden = true;
-        btnAvatar?.setAttribute('aria-expanded', 'false');
-    }
-
-    btnAvatar?.addEventListener('click', () => {
-        if (!menuUsuario) return;
-        const vaiAbrir = menuUsuario.hidden;
-        menuUsuario.hidden = !vaiAbrir;
-        btnAvatar.setAttribute('aria-expanded', String(vaiAbrir));
-    });
-
-    document.addEventListener('mousedown', (e) => {
-        if (!menuUsuario || menuUsuario.hidden) return;
-        const alvo = e.target instanceof Node ? e.target : null;
-        if (alvo && !menuUsuario.contains(alvo) && !btnAvatar?.contains(alvo)) fecharMenuUsuario();
-    });
-
-    document.getElementById('menu-usuario-sair')?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        fecharMenuUsuario();
-        try {
-            await logout();
-        } catch (erro) {
-            console.warn('Falha ao sair da conta:', erro);
-        }
-        // recarrega com o estado de visitante aplicado do zero
-        location.reload();
-    });
-
-    // engrenagem do rodapé da sidebar: vai para o perfil/configurações
-    // (a própria página de perfil redireciona visitante para o login)
-    document.getElementById('btn-config-perfil')?.addEventListener('click', () => {
-        window.location.href = 'paginas/perfil.html';
-    });
-
     // cards de sugestão e atalhos preenchem o campo e enviam
     document.querySelectorAll('.sugestao-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -1473,17 +870,9 @@
         document.getElementById('perfil-avatar').textContent = iniciais;
         document.getElementById('perfil-plano').textContent = plano === 'premium' ? 'Plano Pro B3' : 'Plano Gratuito';
 
-        // avatar da topbar + cabeçalho do menu do perfil
+        // avatar da topbar
         const elAvatarTopo = document.getElementById('topbar-avatar');
-        if (elAvatarTopo) elAvatarTopo.textContent = iniciais;
-        const elNomeMenu = document.getElementById('menu-usuario-nome');
-        const elPlanoMenu = document.getElementById('menu-usuario-plano');
-        if (elNomeMenu) elNomeMenu.textContent = nome;
-        if (elPlanoMenu) elPlanoMenu.textContent = plano === 'premium' ? 'Plano Pro B3' : 'Plano Gratuito';
-        const elSairMenu = document.getElementById('menu-usuario-sair');
-        const elLoginMenu = document.getElementById('menu-usuario-login');
-        if (elSairMenu) elSairMenu.hidden = false;
-        if (elLoginMenu) elLoginMenu.hidden = true;
+ if (elAvatarTopo) elAvatarTopo.textContent = iniciais;
     }
 
     function aplicarVisitante() {
@@ -1496,16 +885,6 @@
 
         const elLogin = document.getElementById('perfil-login-link');
         if (elLogin) elLogin.style.display = 'inline-flex';
-
-        // menu do perfil: visitante entra, não sai
-        const elNomeMenu = document.getElementById('menu-usuario-nome');
-        const elPlanoMenu = document.getElementById('menu-usuario-plano');
-        if (elNomeMenu) elNomeMenu.textContent = 'Visitante';
-        if (elPlanoMenu) elPlanoMenu.textContent = 'Conta Gratuita';
-        const elSairMenu = document.getElementById('menu-usuario-sair');
-        const elLoginMenu = document.getElementById('menu-usuario-login');
-        if (elSairMenu) elSairMenu.hidden = true;
-        if (elLoginMenu) elLoginMenu.hidden = false;
     }
 
     // se a página foi recarregada durante uma resposta, a última pergunta ficou
@@ -1552,9 +931,4 @@
             atualizarStatusHistorico('visitante');
         }
     });
-    </script>
-
-</body>
-
-
-</html>
+    

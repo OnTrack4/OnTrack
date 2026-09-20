@@ -32,7 +32,7 @@
             <div class="consultor-header">
                 <h2>🤖 Consultor IA</h2>
                 <p>Assistente especializado em economia e finanças da Ontrack · </p>
-                <button id="btn-limpar" onclick="limparConversa()">🗑️ Limpar conversa</button>
+                <button id="btn-limpar" type="button" onclick="limparConversa()">🗑️ Limpar conversa</button>
             </div>
 
             <!-- mensagens da conversa -->
@@ -55,7 +55,7 @@
                     placeholder="Digite sua pergunta sobre finanças, investimentos, economia..."
                     rows="1"
                 ></textarea>
-                <button id="btn-enviar" onclick="enviarMensagem()">
+                <button id="btn-enviar" type="button" onclick="enviarMensagem()">
                     <span id="btn-enviar-texto">Enviar</span>
                 </button>
             </div>
@@ -68,25 +68,121 @@
     </footer>
 
     <script type="module">
-        import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
+        import { verificarLogin, buscarDadosUsuario, normalizarMemoria, logout,
+            salvarConversa, apagarConversa, observarConversas, LIMITE_CONVERSAS } from '../firebase.js';
 
         // ============================================================
         // CONFIGURAÇÃO DO BACK-END
-        // Altere BACKEND_URL quando o servidor Python estiver em outro
-        // host, porta ou caminho (ex.: produção, staging).
+        // A API fica na mesma origem em produção (o site e a função Python são
+        // servidos pelo mesmo domínio), então a URL é relativa e não precisa de
+        // configuração por ambiente. O backend local da porta 5000 só é usado
+        // quando a página é servida por outro servidor.
         // ============================================================
-        const BACKEND_URL = 'http://localhost:5000/api/chat';
+        const API_BASE =
+            (location.hostname === 'localhost' || location.hostname === '127.0.0.1') &&
+            location.port !== '5000'
+                ? 'http://localhost:5000'
+                : '';
+        const BACKEND_URL = `${API_BASE}/api/chat`;
 
         // Referência ao usuário logado (Firebase) para enviar uid ao back-end
         let usuarioLogado = null;
+        let usuarioUid = null;
 
-        // navbar dinamica
+        // ============================================================
+        // HISTÓRICO COMPARTILHADO COM A BARRA LATERAL DO INDEX
+        //
+        // MESMAS chaves e MESMA coleção que o index.html usa: o espelho local
+        // ontrack_conversas_<uid> (visitante: ontrack_conversas_visitante) e a
+        // subcoleção usuarios/{uid}/conversas no Firestore. É o que faz a conversa
+        // que começa aqui aparecer na barra lateral do início — e vice-versa —
+        // em vez de existirem dois históricos diferentes.
+        // ============================================================
+        let conversas = [];          // a mesma lista que a barra lateral do index mostra
+        let mensagens = [];          // mensagens da conversa aberta nesta página
+        let conversaAtual = null;    // id da conversa aberta aqui (null = nova)
+        let pararDeObservar = null;
+
+        const chaveLocal = () =>
+            usuarioUid ? `ontrack_conversas_${usuarioUid}` : 'ontrack_conversas_visitante';
+
+        function lerEspelhoLocal() {
+            try {
+                const lista = JSON.parse(localStorage.getItem(chaveLocal()));
+                return Array.isArray(lista) ? lista : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function gerarTitulo(texto) {
+            const t = String(texto).replace(/\s+/g, ' ').trim();
+            return t.length > 38 ? t.slice(0, 38) + '…' : (t || 'Nova conversa');
+        }
+
+        // ao abrir a página, volta para a conversa mais recente — a mesma que o
+        // index abriria pela barra lateral
+        function restaurarDaUltimaMensagem() {
+            const ultima = [...conversas]
+                .sort((a, b) => Number(b.atualizadaEm || 0) - Number(a.atualizadaEm || 0))[0];
+            if (!ultima?.mensagens?.length) return;
+            mensagens = ultima.mensagens;
+            conversaAtual = ultima.id;
+            mensagens.forEach((m) => {
+                if (m.tipo === 'imagem' && m.url) {
+                    adicionarMensagemImagem(m.url, m.texto || '', m.hora, m.custo || null);
+                    return;
+                }
+                adicionarMensagem(m.texto || '', m.papel === 'usuario' ? 'usuario' : 'ia', m.hora, m.custo || null);
+            });
+            const container = document.getElementById('chat-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function persistirConversa() {
+            if (!mensagens.length) return;
+            const titulo = gerarTitulo(mensagens[0].texto);
+            const agora = Date.now();
+            let conversa = conversaAtual
+                ? conversas.find(c => String(c.id) === String(conversaAtual))
+                : null;
+
+            if (conversa) {
+                conversa.mensagens = mensagens;
+                conversa.atualizadaEm = agora;
+            } else {
+                conversaAtual = 'c' + agora;
+                conversa = { id: conversaAtual, titulo, mensagens, atualizadaEm: agora };
+                conversas.unshift(conversa);
+                if (conversas.length > LIMITE_CONVERSAS) conversas.length = LIMITE_CONVERSAS;
+            }
+
+            // espelho local na hora: recarregar a página durante a resposta não perde nada
+            try {
+                localStorage.setItem(chaveLocal(), JSON.stringify(conversas.slice(0, LIMITE_CONVERSAS)));
+            } catch { /* quota cheia — o Firestore continua sendo a fonte da verdade */ }
+
+            // e o servidor recebe em seguida: é o que faz a conversa aparecer na
+            // barra lateral do index, neste e em outros aparelhos
+            if (usuarioUid) {
+                salvarConversa(usuarioUid, conversa).catch((erro) =>
+                    console.warn('Histórico no Firestore indisponível:', erro));
+            }
+        }
+
+        // memória do assistente: vem do Firestore e vai em cada mensagem, porque o
+        // backend em serverless não guarda estado
+        let memoriaDoUsuario = { fatos: [] };
+
+        // navbar dinamica + histórico sincronizado
         verificarLogin(async (usuario) => {
             usuarioLogado = usuario;
+            usuarioUid = usuario?.uid || null;
 
             const navUsuario = document.getElementById('nav-usuario');
             if (usuario) {
                 const dados = await buscarDadosUsuario(usuario.uid);
+                memoriaDoUsuario = normalizarMemoria(dados?.memoria);
                 const nome = dados?.nome || usuario.displayName || 'Usuário';
                 navUsuario.innerHTML = `
                     <span class="nav-saudacao">Olá, ${nome}</span>
@@ -98,19 +194,62 @@
                     window.location.href = '../index.html';
                 });
             }
+
+            conectarHistorico();
         });
+
+        // liga o histórico ao Firestore quando há conta; sem conta, só o espelho local
+        function conectarHistorico() {
+            if (pararDeObservar) { pararDeObservar(); pararDeObservar = null; }
+            conversas = lerEspelhoLocal();
+            restaurarDaUltimaMensagem();
+            if (!usuarioUid) return;
+
+            // MESMO onSnapshot do index: a lista do servidor passa a ser a única
+            // verdade, e o que muda num aparelho chega aqui em tempo real
+            pararDeObservar = observarConversas(usuarioUid, (lista) => {
+                const eraAAberta = conversaAtual
+                    && conversas.some(c => String(c.id) === String(conversaAtual))
+                    && !lista.some(c => String(c.id) === String(conversaAtual));
+                conversas = lista;
+                if (eraAAberta) {
+                    // excluída em outro aparelho: volta para a tela inicial daqui também
+                    limparConversa();
+                    conversaAtual = null;
+                    mensagens = [];
+                    return;
+                }
+                if (!conversaAtual && !mensagens.length) {
+                    // primeira lista do servidor (ex.: visitou a página logado em um
+                    // navegador novo): abre a conversa mais recente, como no index
+                    restaurarDaUltimaMensagem();
+                    return;
+                }
+                const atual = lista.find(c => String(c.id) === String(conversaAtual));
+                if (atual && atual.mensagens?.length && atual.mensagens.length > mensagens.length) {
+                    // respondeu em outro aparelho: as mensagens chegam aqui também
+                    mensagens = atual.mensagens;
+                }
+            }, (erro) => console.warn('Histórico no Firestore indisponível:', erro));
+        }
 
         // hora incial
         document.getElementById('hora-inicial').textContent = horaAtual();
 
         // enviar a msg
+        // a flag evita envios simultâneos: desabilitar o botão não bloqueia o Enter
+        let enviandoConsultor = false;
+
         window.enviarMensagem = async () => {
             const input = document.getElementById('input-mensagem');
             const texto = input.value.trim();
 
-            if (!texto) return;
+            if (!texto || enviandoConsultor) return;
+            enviandoConsultor = true;
 
             adicionarMensagem(texto, 'usuario');
+            mensagens.push({ papel: 'usuario', texto, hora: horaAtual() });
+            persistirConversa();
             input.value = '';
             input.style.height = 'auto';
 
@@ -118,7 +257,11 @@
 
             const btn = document.getElementById('btn-enviar');
             btn.disabled = true;
-            document.getElementById('btn-enviar-texto').textContent = '...';
+            document.getElementById('btn-enviar-texto').textContent = 'Analisando...';
+
+            // teto de espera: o backend pode levar minutos; sem isso a tela trava
+            const controlador = new AbortController();
+            const temporizador = setTimeout(() => controlador.abort(), 180000);
 
             try {
                 const resposta = await fetch(BACKEND_URL, {
@@ -126,8 +269,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         mensagem: texto,
-                        uid: usuarioLogado?.uid ?? null
-                    })
+                        uid: usuarioLogado?.uid ?? null,
+                        memoria: memoriaDoUsuario
+                    }),
+                    signal: controlador.signal
                 });
 
                 const dados = await resposta.json();
@@ -141,31 +286,74 @@
 
             } catch (erro) {
                 indicador.remove();
-                adicionarMensagem('Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.', 'ia');
+                const expirou = erro && erro.name === 'AbortError';
+                adicionarMensagem(
+                    expirou
+                        ? 'A resposta demorou mais que o normal e a espera foi interrompida. Tente novamente.'
+                        : 'Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.',
+                    'ia'
+                );
                 console.error('Erro:', erro);
+            } finally {
+                clearTimeout(temporizador);
+                btn.disabled = false;
+                document.getElementById('btn-enviar-texto').textContent = 'Enviar';
+                enviandoConsultor = false;
             }
-
-            btn.disabled = false;
-            document.getElementById('btn-enviar-texto').textContent = 'Enviar';
         };
 
         // interpreta o JSON retornado pelo back-end (tipo: "texto" ou "imagem")
         function renderizarRespostaIA(dados) {
+            const custo = (dados && dados.custo) || null;
+
             if (dados.tipo === 'texto' && dados.resposta) {
-                adicionarMensagem(dados.resposta, 'ia');
+                adicionarMensagem(dados.resposta, 'ia', null, custo);
+                mensagens.push({ papel: 'ia', texto: dados.resposta, hora: horaAtual(), custo });
+                persistirConversa();
                 return;
             }
 
             if (dados.tipo === 'imagem' && dados.url) {
-                adicionarMensagemImagem(dados.url, dados.texto);
+                const urlSegura = sanitizarUrlImagem(dados.url);
+                if (!urlSegura) {
+                    adicionarMensagem('Não foi possível exibir o gráfico retornado pelo servidor.', 'ia');
+                    mensagens.push({ papel: 'ia', texto: 'Não foi possível exibir o gráfico retornado pelo servidor.', hora: horaAtual(), custo });
+                    persistirConversa();
+                    return;
+                }
+                adicionarMensagemImagem(urlSegura, dados.texto, null, custo);
+                mensagens.push({ papel: 'ia', tipo: 'imagem', url: urlSegura, texto: dados.texto || '', hora: horaAtual(), custo });
+                persistirConversa();
                 return;
             }
 
             adicionarMensagem('Recebi uma resposta inesperada do servidor. Tente novamente.', 'ia');
+            mensagens.push({ papel: 'ia', texto: 'Recebi uma resposta inesperada do servidor. Tente novamente.', hora: horaAtual(), custo });
+            persistirConversa();
+        }
+
+        // ---------- medidor de consumo (o backend devolve dados.custo) ----------
+        function rotuloCusto(custo) {
+            const ia = Number(custo?.ia) || 0;
+            const fontes = Number(custo?.fontes) || 0;
+            const partes = [];
+            if (ia > 0) partes.push(ia === 1 ? '1 chamada de IA' : `${ia} chamadas de IA`);
+            if (fontes > 0) partes.push(fontes === 1 ? '1 consulta de mercado' : `${fontes} consultas de mercado`);
+            return partes.join(' · ');
+        }
+
+        function elementoCusto(custo) {
+            const rotulo = rotuloCusto(custo);
+            if (!rotulo) return null;
+            const span = document.createElement('span');
+            span.className = 'mensagem-custo';
+            span.textContent = rotulo;
+            span.title = 'Requisições externas consumidas por esta resposta';
+            return span;
         }
 
         // adicionar msg de texto
-        function adicionarMensagem(texto, tipo) {
+        function adicionarMensagem(texto, tipo, hora = null, custo = null) {
             const container = document.getElementById('chat-container');
 
             const div = document.createElement('div');
@@ -173,20 +361,27 @@
 
             const avatar = tipo === 'ia' ? '🤖' : '👤';
 
-            div.innerHTML = `
-                <div class="mensagem-avatar">${avatar}</div>
-                <div class="mensagem-conteudo">
-                    <p>${formatarTexto(texto)}</p>
-                    <span class="mensagem-hora">${horaAtual()}</span>
-                </div>
-            `;
+            const conteudo = document.createElement('div');
+            conteudo.classList.add('mensagem-conteudo');
+            conteudo.innerHTML = `<p>${formatarTexto(texto)}</p>`;
+
+            const spanHora = document.createElement('span');
+            spanHora.classList.add('mensagem-hora');
+            spanHora.textContent = hora || horaAtual();
+            conteudo.appendChild(spanHora);
+
+            const spanCusto = tipo === 'ia' ? elementoCusto(custo) : null;
+            if (spanCusto) conteudo.appendChild(spanCusto);
+
+            div.innerHTML = `<div class="mensagem-avatar">${avatar}</div>`;
+            div.appendChild(conteudo);
 
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
 
         // adicionar msg com imagem/gráfico retornado pelo back-end (appendChild — não altera o histórico)
-        function adicionarMensagemImagem(url, texto = '') {
+        function adicionarMensagemImagem(url, texto = '', hora = null, custo = null) {
             const urlSegura = sanitizarUrlImagem(url);
             if (!urlSegura) {
                 adicionarMensagem('Não foi possível exibir o gráfico retornado pelo servidor.', 'ia');
@@ -218,10 +413,13 @@
             img.style.borderRadius = '8px';
             conteudo.appendChild(img);
 
-            const hora = document.createElement('span');
-            hora.classList.add('mensagem-hora');
-            hora.textContent = horaAtual();
-            conteudo.appendChild(hora);
+            const spanHora = document.createElement('span');
+            spanHora.classList.add('mensagem-hora');
+            spanHora.textContent = hora || horaAtual();
+            conteudo.appendChild(spanHora);
+
+            const spanCusto = elementoCusto(custo);
+            if (spanCusto) conteudo.appendChild(spanCusto);
 
             div.appendChild(avatar);
             div.appendChild(conteudo);
@@ -251,8 +449,11 @@
             return div;
         }
 
-        // limpar a conversa
-        window.limparConversa = () => {
+        // limpar a conversa: agora é a MESMA exclusão da barra lateral do index —
+        // sai do espelho local e, com conta, do Firestore (desaparece em todos os
+        // aparelhos, e o index recebe a remoção em tempo real pelo próprio onSnapshot)
+        window.limparConversa = async () => {
+            const id = conversaAtual;
             const container = document.getElementById('chat-container');
             container.innerHTML = `
                 <div class="mensagem mensagem-ia">
@@ -263,6 +464,20 @@
                     </div>
                 </div>
             `;
+            if (!id) return;
+            conversas = conversas.filter(c => String(c.id) !== String(id));
+            conversaAtual = null;
+            mensagens = [];
+            try {
+                localStorage.setItem(chaveLocal(), JSON.stringify(conversas.slice(0, LIMITE_CONVERSAS)));
+            } catch { /* sem espelho local */ }
+            if (usuarioUid) {
+                try {
+                    await apagarConversa(usuarioUid, id);
+                } catch (erro) {
+                    console.warn('Não consegui apagar no servidor:', erro);
+                }
+            }
         };
 
         // enviar msg com enter
@@ -272,6 +487,9 @@
                 enviarMensagem();
             }
         });
+
+        // rede de segurança: nenhum envio pode submeter/recarregar a página
+        document.addEventListener('submit', (e) => e.preventDefault(), true);
 
         // redimensiona o textarea automaticamente
         document.getElementById('input-mensagem').addEventListener('input', (e) => {
@@ -311,6 +529,11 @@
                 return null;
             }
         }
+
+        // exibição do custo junto da hora
+        const estilo = document.createElement('style');
+        estilo.textContent = '.mensagem-custo{display:block;margin-top:2px;font-size:10.5px;opacity:.45;}';
+        document.head.appendChild(estilo);
 
     </script>
 

@@ -3,7 +3,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, deleteDoc, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDi4vXisro4NLQ9bKkSuChfcuCRuXlVw3s",
@@ -147,4 +147,101 @@ async function exigirPremium(uid, elementoId, mensagem = null) {
     return true;
 }
 
-export { auth, db, registrarUsuario, loginEmailSenha, loginGoogle, logout, verificarLogin, buscarDadosUsuario, verificarPlano, exigirPremium };
+// ============================================================
+// MEMÓRIA DO ASSISTENTE
+//
+// O backend rodando em serverless não guarda estado em disco, então a memória do
+// usuário (os fatos que o assistente lembra entre conversas) vive no Firestore, no
+// campo `memoria` do próprio documento do usuário: usuarios/{uid}.memoria.fatos.
+// Quem lê e envia junto com cada mensagem é o frontend.
+// ============================================================
+
+function normalizarMemoria(valor) {
+    const fatos = valor?.fatos;
+    if (!Array.isArray(fatos)) return { fatos: [] };
+    return {
+        fatos: fatos
+            .filter((fato) => typeof fato === 'string' && fato.trim())
+            .slice(0, 100)
+    };
+}
+
+
+// ============================================================
+// HISTÓRICO DE CONVERSAS DO CHAT
+//
+// Cada conversa é um documento em usuarios/{uid}/conversas/{id}. Guardar no
+// Firestore (e não no localStorage) é o que faz o histórico acompanhar o usuário
+// entre dispositivos e faz a exclusão valer no servidor: apagar aqui apaga para
+// todos os aparelhos, porque o servidor é a fonte da verdade.
+// ============================================================
+
+const LIMITE_CONVERSAS = 30;
+
+// caminho do documento de sessão (qual conversa está aberta)
+const HISTORICO_CHAT = "historico_chat";
+const DOCUMENTO_SESSAO = "sessao";
+
+function referenciaConversas(uid) {
+    return collection(db, "usuarios", uid, "conversas");
+}
+
+// grava (ou atualiza) uma conversa. O merge preserva os campos já existentes no
+// documento e troca o array de mensagens inteiro pelo mais recente
+async function salvarConversa(uid, conversa) {
+    await setDoc(doc(referenciaConversas(uid), String(conversa.id)), {
+        titulo: String(conversa.titulo || 'Conversa').slice(0, 120),
+        atualizadaEm: Number(conversa.atualizadaEm) || Date.now(),
+        mensagens: conversa.mensagens || []
+    }, { merge: true });
+}
+
+async function apagarConversa(uid, id) {
+    await deleteDoc(doc(referenciaConversas(uid), String(id)));
+}
+
+// acompanha o histórico em tempo real: qualquer mudança feita em outro aparelho
+// (ou em outra aba) chega aqui sem recarregar a página. Devolve a função para
+// encerrar a observação quando o usuário trocar ou sair.
+function observarConversas(uid, aoMudar, aoFalhar) {
+    const consulta = query(
+        referenciaConversas(uid),
+        orderBy("atualizadaEm", "desc"),
+        limit(LIMITE_CONVERSAS)
+    );
+
+    return onSnapshot(consulta, (foto) => {
+        aoMudar(foto.docs.map((d) => Object.assign({ id: d.id }, d.data())));
+    }, aoFalhar);
+}
+
+// ---------- sessão do chat (qual conversa está aberta) ----------
+//
+// Um documento único por usuário, em usuarios/{uid}/historico_chat/sessao. Existe
+// para o outro aparelho abrir na mesma conversa em que você estava.
+//
+// Por que não guardar o histórico inteiro aqui dentro: um documento tem teto de 1MB
+// e a exclusão de uma conversa reescreveria o documento de todas, com dois aparelhos
+// podendo se sobrescrever. As mensagens ficam em conversas/{id} — uma por conversa.
+
+function referenciaSessao(uid) {
+    return doc(db, "usuarios", uid, HISTORICO_CHAT, DOCUMENTO_SESSAO);
+}
+
+async function salvarSessao(uid, conversaId) {
+    await setDoc(referenciaSessao(uid), {
+        conversa_atual: conversaId ? String(conversaId) : null,
+        atualizadaEm: Date.now()
+    }, { merge: true });
+}
+
+// devolve a função que encerra a observação
+function observarSessao(uid, aoMudar, aoFalhar) {
+    return onSnapshot(referenciaSessao(uid), (foto) => {
+        const dados = foto.data() || {};
+        aoMudar(dados.conversa_atual || null);
+    }, aoFalhar);
+}
+
+
+export { auth, db, registrarUsuario, loginEmailSenha, loginGoogle, logout, verificarLogin, buscarDadosUsuario, verificarPlano, exigirPremium, normalizarMemoria, LIMITE_CONVERSAS, salvarConversa, apagarConversa, observarConversas, salvarSessao, observarSessao };

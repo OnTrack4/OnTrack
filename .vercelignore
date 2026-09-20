@@ -1,0 +1,27 @@
+# O que não sobe para a Vercel.
+#
+# Vale para as duas pontas do deploy: não vira arquivo estático servido pelo CDN e
+# não entra no pacote enviado. O .gitignore já cobre boa parte disso quando o deploy
+# vem do Git, mas o `vercel` pela linha de comando envia o diretório local — então
+# segredo e ambiente local são listados aqui de propósito.
+
+# ambiente e segredos
+back-end/venv/
+back-end/.env
+back-end/.env.*
+
+# estado de execução (em produção isso vive no /tmp da função)
+back-end/memoria*.json
+back-end/uso_gemini.json
+back-end/estado_ias.json
+back-end/__pycache__/
+
+# PNGs de gráficos de teste que estão no repositório: em produção os gráficos são
+# gerados em /tmp e servidos por /api/graficos/<arquivo>
+back-end/static/graficos/*.png
+
+# material que não é site nem backend
+.freebuff/
+documentacao/
+docs.json
+*.md

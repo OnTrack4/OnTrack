@@ -1,6 +1,8 @@
-flask
-flask-cors
-requests
-matplotlib
-python-dotenv
-economatica
+# A lista de dependências ficou na raiz do projeto (requirements.txt), que é onde a
+# Vercel lê para montar a Vercel Function. Este arquivo só aponta para lá, para que
+# `pip install -r back-end/requirements.txt` continue funcionando no ambiente local.
+#
+# Ele antes listava "economatica", pacote que não existe no PyPI: qualquer instalação
+# a partir desta lista falhava, e por isso o deploy quebrava.
+
+-r ../requirements.txt

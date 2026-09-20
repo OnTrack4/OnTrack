@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// =============================================================================
+// Regras de segurança do Firestore — OnTrack
+//
+// Coleções que o app usa hoje:
+//
+//   usuarios/{uid}                        -> perfil: nome, email, plano,
+//                                            perfilInvestidor, criadoEm
+//   usuarios/{uid}/conversas/{conversaId} -> histórico do chat:
+//                                            titulo, atualizadaEm, mensagens[]
+//   usuarios/{uid}/historico_chat/sessao  -> qual conversa está aberta, lida em
+//                                            tempo real: conversa_atual,
+//                                            atualizadaEm
+//
+// Regra de ouro: cada pessoa alcança apenas o próprio espaço. `request.auth.uid`
+// é o uid que o Firebase Auth verificou no servidor — não vem do cliente, então
+// não dá para forjar trocando o uid no JavaScript.
+//
+// Como publicar: console do Firebase (Firestore Database -> Rules), colando este
+// arquivo inteiro; ou, com a CLI, `firebase deploy --only firestore:rules`
+// (nesse caso o projeto precisa de um firebase.json apontando para este arquivo).
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ehDono(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Limites do que o cliente pode gravar em uma conversa. Não trocam segurança
+    // por conveniência: existem para que um documento não cresça sem limite
+    // (o Firestore corta em ~1 MB por documento) nem receba lixo de outro tipo.
+    function conversaValida() {
+      let c = request.resource.data;
+      return c.titulo is string
+        && c.titulo.size() > 0
+        && c.titulo.size() <= 120
+        && c.atualizadaEm is number
+        && c.mensagens is list
+        && c.mensagens.size() <= 300;
+    }
+
+    // Documento de sessão: guarda qual conversa está aberta, para o outro aparelho
+    // abrir na mesma. O campo é um id de conversa (ou nulo, quando não há nenhuma
+    // aberta) mais um carimbo de tempo — nada além disso é aceito.
+    function sessaoValida() {
+      let s = request.resource.data;
+      let conversa = s.get('conversa_atual', null);
+      return s.get('atualizadaEm', 0) is number
+        && (conversa == null || (conversa is string && conversa.size() <= 80));
+    }
+
+    match /usuarios/{uid} {
+
+      // perfil: só o dono lê
+      allow read: if ehDono(uid);
+
+      // criar o próprio perfil já entra no plano gratuito. O plano premium só pode
+      // ser gravado pelo servidor (depois da confirmação do pagamento), nunca pelo
+      // próprio usuário pelo console do navegador.
+      allow create: if ehDono(uid) && request.resource.data.plano == 'basico';
+
+      // Atualizar o próprio perfil é permitido (nome, perfilInvestidor, respostas do
+      // questionário), desde que o plano continue o mesmo. O `.get()` com valor padrão
+      // evita erro de campo inexistente em documento antigo e, ao mesmo tempo, impede
+      // que alguém sem plano "crie" um plano pelo console do navegador.
+      allow update: if ehDono(uid)
+        && request.resource.data.get('plano', 'basico')
+           == resource.data.get('plano', 'basico');
+
+      // perfil não se apaga pelo cliente
+      allow delete: if false;
+
+      // ---------- histórico de conversas ----------
+      // Fonte da verdade do histórico: por isso acompanha o usuário entre
+      // dispositivos e uma exclusão feita em um aparelho vale para todos.
+      match /conversas/{conversaId} {
+        allow read, delete: if ehDono(uid);
+        allow create, update: if ehDono(uid) && conversaValida();
+      }
+
+      // ---------- sessão do chat ----------
+      // Um único documento (historico_chat/sessao) com a conversa aberta, lido em
+      // tempo real: é o que faz o celular abrir na mesma conversa que o PC. As
+      // mensagens continuam em conversas/{id}, então excluir uma conversa não mexe
+      // nas outras nem reescreve um documento compartilhado.
+      match /historico_chat/{documento} {
+        allow read, delete: if ehDono(uid);
+        allow create, update: if ehDono(uid) && sessaoValida();
+      }
+    }
+
+    // Qualquer outra coleção fica fechada: o padrão é negar.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

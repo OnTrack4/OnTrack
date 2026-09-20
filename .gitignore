@@ -1,20 +1,105 @@
-# Segredos e chaves
-.env
-*.env
-back-end/.env
+# ===========================================================================
+# SEGREDOS, CHAVES DE API E VARIAVEIS DE AMBIENTE  (nunca versionar)
+# ===========================================================================
 
-# Ambientes Virtuais
+# arquivos .env — o .env.example continua versionado de proposito (so placeholders)
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+back-end/.env
+backend/.env
+.envrc
+
+# certificados e chaves criptograficas
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
+id_rsa*
+id_ed25519*
+id_ecdsa*
+
+# arquivos de chaves/credenciais. Evito o glob amplo "*keys*" (ignoraria
+# tambem um arquivo de codigo legitimo) e cubro as extensoes de dados/config:
+keys.py
+key.py
+*keys*.json
+*keys*.py
+*keys*.txt
+*keys*.yaml
+*keys*.yml
+*apikeys*
+*api_keys*
+*credentials*.json
+*credential*.yaml
+*credential*.yml
+*serviceaccount*.json
+*service-account*.json
+*secret*.json
+*secret*.yaml
+*secret*.yml
+secrets.toml
+.streamlit/secrets.toml
+
+# configuracoes locais de ferramentas (costumam guardar tokens)
+.npmrc
+.pypirc
+netrc
+.netrc
+.auth/
+.aws/
+.gcloud/
+kubeconfig
+
+# ===========================================================================
+# ESTADO DE EXECUCAO DO AGENTE (uso e memoria por usuario)
+# ===========================================================================
+
+# contador de cota diaria do Gemini
+back-end/uso_gemini.json*
+# estado dos provedores de IA (quem esta em cooldown) — so runtime
+back-end/estado_ias.json*
+# memoria por usuario: contem informacoes pessoais ditas no chat
+back-end/memoria*.json
+memoria*.json
+
+# ===========================================================================
+# AMBIENTES VIRTUAIS
+# ===========================================================================
+
 venv/
 .venv/
 env/
+ENV/
 
-# Cache de Python
+# ===========================================================================
+# CACHE DE PYTHON E FERRAMENTAS
+# ===========================================================================
+
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Arquivos do sistema / IDE
+# ===========================================================================
+# ARQUIVOS DO SISTEMA / IDE
+# ===========================================================================
+
 .DS_Store
+Thumbs.db
 .vscode/
+.idea/
 
-# Estado de execução do agente (contador de cota)
-back-end/uso_gemini.json*
+# ===========================================================================
+# LOGS E SAIDAS LOCAIS
+# ===========================================================================
+
+*.log
