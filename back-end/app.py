@@ -20,10 +20,14 @@ Camadas novas:
      estourada (403/429/quota exceeded), timeout ou falha de conexão apenas
      descartam aquela fonte, e a resposta segue com as demais. Se todas
      falharem, o prompt continua limpo e a IA responde com conhecimento geral.
-  2. Rotação sequencial de IAs — Gemini principal, 2 chaves reservas do Gemini
-     e OpenRouter (com lista de modelos). Nunca há requisições paralelas: cada
+  2. Rotação sequencial de IAs — Gemini principal, 2 chaves reservas do Gemini,
+     a Mistral, o Cloudflare Workers AI e o OpenRouter (com lista de modelos).
+     Nunca há requisições paralelas: cada
      provedor só é acionado quando o anterior realmente não conseguiu
      responder (HTTP 429/503, erro de chave/modelo, 5xx ou falha de rede).
+  3. Painel de cotas no chat — GET /api/status-ias informa quantas requisições já
+     saíram hoje em CADA provedor e quanto resta até a renovação. O contador mora
+     em uso_ias.json e é lido sem chamar nenhuma API.
 
 Nenhum erro de API externa derruba o backend nem interrompe o chat.
 """
@@ -166,11 +170,16 @@ FINNHUB_API_KEY = _chave("FINNHUB_API_KEY")
 TWELVE_DATA_API_KEY = _chave("TWELVE_DATA_API_KEY")
 
 # IAs da rotação: a primeira tentativa usa GEMINI_API_KEY, seguida das reservas
-# GEMINI_API_KEY_2 e GEMINI_API_KEY_3 e, por último, o OpenRouter
+# GEMINI_API_KEY_2 e GEMINI_API_KEY_3, depois a Mistral e, por último, o OpenRouter
 OPENROUTER_API_KEY = _chave("OPENROUTER_API_KEY")
 GEMINI_API_KEY = _chave("GEMINI_API_KEY")
 GEMINI_API_KEY_2 = _chave("GEMINI_API_KEY_2")
 GEMINI_API_KEY_3 = _chave("GEMINI_API_KEY_3")
+MISTRAL_API_KEY = _chave("MISTRAL_API_KEY")
+# Cloudflare Workers AI: token e account id andam juntos — sem os dois o provedor
+# fica desativado e a rotação simplesmente segue para o próximo.
+CLOUDFLARE_API_TOKEN = _chave("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_ACCOUNT_ID = _chave("CLOUDFLARE_ACCOUNT_ID")
 
 
 # ---------------------------------------------------------------------------
@@ -529,6 +538,163 @@ def resposta_com_aviso_de_cota(texto):
     """Acrescenta o aviso preventivo de cota ao texto que vai para o chat."""
     aviso = aviso_de_cota()
     return f"{texto}\n\n{aviso}" if aviso else texto
+
+
+# ---------------------------------------------------------------------------
+# COTA DOS PROVEDORES DA ROTAÇÃO (contador local por dia de renovação)
+#
+# O aviso acima cobre só a chave principal do Gemini. Como o chat passa a mostrar
+# quantas requisições restam em CADA API, o consumo de todos os provedores é
+# contado aqui, em arquivo próprio (uso_ias.json). O "dia" de cada contador é o dia
+# em que a cota daquele provedor realmente renova: meia-noite do Pacífico para o
+# Gemini e meia-noite UTC para Mistral, Cloudflare e OpenRouter.
+# ---------------------------------------------------------------------------
+
+ARQUIVO_USO_IAS = os.path.join(DIR_ESTADO, "uso_ias.json")
+
+# Tetos diários conhecidos dos planos gratuitos. None = o provedor não limita por
+# requisição/dia; nesse caso o painel do chat mostra o consumo e a explicação de
+# NOTAS_LIMITE_IA em vez de um número de "restantes" enganoso.
+LIMITES_DIARIOS_IA = {
+    "gemini_principal": LIMITE_DIARIO_PADRAO,
+    "gemini_reserva_1": LIMITE_DIARIO_PADRAO,
+    "gemini_reserva_2": LIMITE_DIARIO_PADRAO,
+    "mistral": None,
+    "cloudflare": None,
+    "openrouter": int(os.getenv("OPENROUTER_LIMITE_DIARIO") or 50),
+}
+
+FUSOS_RENOVACAO_IA = {
+    "gemini_principal": ("America/Los_Angeles", -7),
+    "gemini_reserva_1": ("America/Los_Angeles", -7),
+    "gemini_reserva_2": ("America/Los_Angeles", -7),
+    "mistral": ("UTC", 0),
+    "cloudflare": ("UTC", 0),
+    "openrouter": ("UTC", 0),
+}
+
+NOTAS_LIMITE_IA = {
+    "mistral": "plano gratuito limita por minuto (1 req/s), sem teto diário fixo",
+    "cloudflare": "gratuito: 10.000 neurons/dia (o teto é por neuron, não por requisição)",
+    "openrouter": "teto dos modelos gratuitos; ajuste em OPENROUTER_LIMITE_DIARIO",
+}
+
+# leitura + gravação do contador precisam ser atômicas entre threads: o Flask atende
+# cada mensagem em um thread próprio e duas respostas podem terminar juntas
+_trava_uso_ias = threading.Lock()
+
+
+def _dia_do_provedor(provedor):
+    """Dia de referência do contador, no fuso em que a cota daquele provedor renova."""
+    nome_fuso, offset = FUSOS_RENOVACAO_IA.get(provedor, ("UTC", 0))
+    return datetime.now(_fuso(nome_fuso, offset)).strftime("%Y-%m-%d")
+
+
+def _ler_uso_ias():
+    try:
+        with open(ARQUIVO_USO_IAS, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(dados, dict):
+        return {}
+    return {nome: valor for nome, valor in dados.items() if isinstance(valor, dict)}
+
+
+def _gravar_uso_ias(dados):
+    try:
+        temporario = f"{ARQUIVO_USO_IAS}.tmp"
+        with open(temporario, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+        os.replace(temporario, ARQUIVO_USO_IAS)
+    except OSError:
+        pass
+
+
+def registrar_chamada_ia(provedor):
+    """
+    Conta a chamada bem-sucedida de um provedor da rotação. O contador zera sozinho
+    quando o dia de renovação daquele provedor vira; falha de disco (serverless)
+    apenas deixa o painel sem número, nunca derruba o chat.
+    """
+    try:
+        with _trava_uso_ias:
+            dados = _ler_uso_ias()
+            dia = _dia_do_provedor(provedor)
+            atual = dados.get(provedor) or {}
+            chamadas = int(atual.get("chamadas") or 0) if atual.get("dia") == dia else 0
+            dados[provedor] = {"dia": dia, "chamadas": chamadas + 1}
+            _gravar_uso_ias(dados)
+            return dados[provedor]
+    except Exception:
+        return {}
+
+
+def renovacao_em_texto_utc():
+    """Próxima virada do dia UTC (quando renovam Mistral, Cloudflare e OpenRouter)."""
+    agora = datetime.now(timezone.utc)
+    meia_noite = (agora + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return meia_noite.astimezone(_fuso(FUSO_EXIBICAO, -3)).strftime("%d/%m/%Y às %H:%M")
+
+
+def status_provedores_ia():
+    """
+    Situação de cada API da rotação para o painel do chat: chamadas feitas hoje no
+    contador local, teto conhecido do plano gratuito, quanto ainda resta e se o
+    provedor está em espera (cooldown) neste momento. Lê apenas estado local — não
+    faz nenhuma requisição aos provedores, então consultar isso não consome cota.
+    """
+    dados = _ler_uso_ias()
+    limite_gemini = ler_uso_gemini()["limite"]  # aprendido com o próprio 429/plano
+    agora = time.time()
+
+    provedores = []
+    for identificador, rotulo, configurado in (
+        ("gemini_principal", "Gemini principal", bool(GEMINI_API_KEY)),
+        ("gemini_reserva_1", "Gemini reserva 1", bool(GEMINI_API_KEY_2)),
+        ("gemini_reserva_2", "Gemini reserva 2", bool(GEMINI_API_KEY_3)),
+        ("mistral", f"Mistral ({MISTRAL_MODEL})", bool(MISTRAL_API_KEY)),
+        (
+            "cloudflare",
+            f"Cloudflare ({CLOUDFLARE_MODEL})",
+            bool(CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID),
+        ),
+        (
+            "openrouter",
+            f"OpenRouter ({len(MODELOS_OPENROUTER_FALLBACK)} modelos)",
+            bool(OPENROUTER_API_KEY),
+        ),
+    ):
+        registro = dados.get(identificador) or {}
+        chamadas = (
+            int(registro.get("chamadas") or 0)
+            if registro.get("dia") == _dia_do_provedor(identificador)
+            else 0
+        )
+        # as três chaves do Gemini usam o mesmo modelo/plano, então o limite aprendido
+        # em uma vale para as outras até que um 429 diga outra coisa
+        limite = (
+            limite_gemini if identificador.startswith("gemini")
+            else LIMITES_DIARIOS_IA.get(identificador)
+        )
+        limite = int(limite) if limite else None
+        provedores.append({
+            "id": identificador,
+            "rotulo": rotulo,
+            "configurado": configurado,
+            "chamadas": chamadas,
+            "limite": limite,
+            "restantes": max(limite - chamadas, 0) if limite else None,
+            "em_espera_segundos": int(
+                max(_quota_bloqueada_ate.get(identificador, 0.0) - agora, 0)
+            ),
+            "renovacao": (
+                renovacao_em_texto() if identificador.startswith("gemini")
+                else renovacao_em_texto_utc()
+            ),
+            "nota": NOTAS_LIMITE_IA.get(identificador, ""),
+        })
+    return provedores
 
 
 def _segundos_ate_liberar(resposta):
@@ -1296,7 +1462,7 @@ def coletar_dados_financeiros(mensagem):
 # ===========================================================================
 # 2) MOTOR DE IAs COM ROTAÇÃO SEQUENCIAL (nunca em paralelo)
 #
-# Ordem: Gemini principal -> Gemini reserva 1 -> Gemini reserva 2 -> OpenRouter
+# Ordem: Gemini principal -> reservas -> Mistral -> Cloudflare Workers AI -> OpenRouter
 # (testando seus modelos na ordem definida em MODELOS_OPENROUTER_FALLBACK).
 # O provedor seguinte só é acionado quando o anterior não conseguiu responder.
 # ===========================================================================
@@ -1306,6 +1472,19 @@ API_URL_GEMINI = (
     "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
 )
 URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
+URL_MISTRAL = "https://api.mistral.ai/v1/chat/completions"
+# Cloudflare Workers AI: endpoint por conta. O modelo padrão é o Llama 3.1 8B
+# Instruct (rápido e barato no plano gratuito), trocável por CLOUDFLARE_MODEL sem
+# mexer no código.
+URL_CLOUDFLARE = "https://api.cloudflare.com/client/v4/accounts/{conta}/ai/run/{modelo}"
+CLOUDFLARE_MODEL = (
+    os.getenv("CLOUDFLARE_MODEL") or ""
+).strip() or "@cf/meta/llama-3.1-8b-instruct"
+TIMEOUT_CLOUDFLARE = 15
+# Modelo da Mistral na rotação: o alias "mistral-small-latest" aponta sempre para a
+# versão atual, rápida e mais barata da família small. Pode ser trocado por outra
+# (ex.: mistral-large-latest) só pela variável MISTRAL_MODEL, sem mexer no código.
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest").strip() or "mistral-small-latest"
 
 # Ordem de tentativa dos modelos gratuitos do OpenRouter: do mais rápido/especializado
 # para o mais pesado. O primeiro que responde com sucesso vence e encerra a rotação;
@@ -1342,6 +1521,8 @@ TIMEOUT_GEMINI = 8
 # O OpenRouter roda o prompt real (system + contexto + cotações, ~6 mil caracteres)
 # e os modelos gratuitos levam de 5 a 13s nele.
 TIMEOUT_OPENROUTER = 15
+# A Mistral roda o mesmo prompt real; a família small costuma responder em 2 a 8s.
+TIMEOUT_MISTRAL = 12
 # Orçamento da rotação inteira. Nenhuma tentativa começa se não couber aqui, então
 # este é o teto real da espera da IA (era 60s, enquanto o cliente tolerava 180s).
 LIMITE_TOTAL_ROTACAO = 30
@@ -1504,8 +1685,9 @@ def _chave_cache_ia(prompt_usuario, instrucao_sistema):
 
 def _provedores_ia():
     """
-    Ordem exata da rotação: 3 chaves do Gemini e, por último, o OpenRouter.
-    Cada chamada recebe o prazo da rotação para não estourar o orçamento total.
+    Ordem exata da rotação: 3 chaves do Gemini, a Mistral e, por último, o
+    OpenRouter. Cada chamada recebe o prazo da rotação para não estourar o
+    orçamento total.
     """
     return (
         (
@@ -1527,6 +1709,8 @@ def _provedores_ia():
                 prompt, instrucao, GEMINI_API_KEY_3, "gemini_reserva_2", prazo=prazo
             ),
         ),
+        ("Mistral", _chamar_mistral),
+        ("Cloudflare", _chamar_cloudflare),
         ("OpenRouter", _chamar_openrouter),
     )
 
@@ -1612,6 +1796,8 @@ def _chamar_gemini_com_chave(prompt_usuario, instrucao_sistema, chave, identific
 
         if contar_cota:
             registrar_chamada_gemini()  # só a chamada bem-sucedida consome a cota local
+        # contador do painel do chat: vale para as três chaves do Gemini
+        registrar_chamada_ia(identificador)
 
         try:
             dados = resposta.json()
@@ -1653,7 +1839,8 @@ def _chamar_openrouter(prompt_usuario, instrucao_sistema, prazo=None):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:5000",
+        # metadados de atribuição do OpenRouter: o domínio de produção, não localhost
+        "HTTP-Referer": os.environ.get("SITE_URL", "https://on-track-sage.vercel.app"),
         "X-Title": "OnTrack",
     }
 
@@ -1720,9 +1907,144 @@ def _chamar_openrouter(prompt_usuario, instrucao_sistema, prazo=None):
 
         if str(texto or "").strip():
             _ultimo_modelo_openrouter = modelo
+            registrar_chamada_ia("openrouter")  # contador do painel de cotas do chat
             return str(texto)
 
     raise ProvedorIndisponivel("nenhum modelo do OpenRouter respondeu")
+
+
+def _chamar_mistral(prompt_usuario, instrucao_sistema, prazo=None):
+    """
+    Penúltima tentativa da rotação: Mistral (API compatível com o formato OpenAI).
+    Uma única chamada, sem repetir a requisição: 429/5xx/erro de rede entram em
+    cooldown e a rotação segue para o próximo provedor — o mesmo desenho do
+    OpenRouter, que evita gastar cota insistindo em quem acabou de falhar.
+    """
+    if not MISTRAL_API_KEY:
+        raise ProvedorIndisponivel("chave não configurada")
+
+    if _quota_bloqueada_ate.get("mistral", 0.0) > time.time():
+        raise ProvedorIndisponivel("em espera por cota da Mistral", quota=True)
+
+    if not _cabe_no_orcamento(prazo):
+        raise ProvedorIndisponivel("orçamento de tempo da rotação esgotado")
+
+    headers = {
+        "Authorization": f"Bearer {MISTRAL_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": MISTRAL_MODEL,
+        "messages": [
+            {"role": "system", "content": instrucao_sistema},
+            {"role": "user", "content": prompt_usuario},
+        ],
+        "temperature": 0.4,
+    }
+    try:
+        resposta = _post_em_pedacos(URL_MISTRAL, headers, payload, TIMEOUT_MISTRAL, prazo)
+    except requests.exceptions.RequestException as erro:
+        _quota_bloqueada_ate["mistral"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"não respondeu ({type(erro).__name__})") from None
+
+    detalhe = (resposta.text or "")[:120]
+    if resposta.status_code in STATUS_QUE_ATIVAM_ROTACAO or resposta.status_code >= 400:
+        _quota_bloqueada_ate["mistral"] = time.time() + (
+            COOLDOWN_QUOTA_PADRAO if resposta.status_code == 429
+            else COOLDOWN_PROVEDOR_FALHA
+        )
+        raise ProvedorIndisponivel(
+            f"HTTP {resposta.status_code}: {detalhe}",
+            quota=(resposta.status_code == 429),
+        )
+
+    try:
+        dados = resposta.json()
+        texto = dados["choices"][0]["message"]["content"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        _quota_bloqueada_ate["mistral"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(
+            f"resposta em formato inesperado: {detalhe}"
+        ) from None
+
+    if not str(texto or "").strip():
+        raise ProvedorIndisponivel("resposta vazia")
+    registrar_chamada_ia("mistral")  # contador do painel de cotas do chat
+    return str(texto)
+
+
+def _chamar_cloudflare(prompt_usuario, instrucao_sistema, prazo=None):
+    """
+    Cloudflare Workers AI (formato de mensagens igual ao da OpenAI). Mesmo desenho da
+    Mistral: UMA única chamada, sem repetir a requisição — 429/5xx/erro de rede entram
+    em cooldown e a rotação segue para o próximo provedor, em vez de queimar a cota
+    gratuita insistindo em quem acabou de falhar.
+    """
+    if not CLOUDFLARE_API_TOKEN or not CLOUDFLARE_ACCOUNT_ID:
+        raise ProvedorIndisponivel("token/account id do Cloudflare não configurados")
+
+    if _quota_bloqueada_ate.get("cloudflare", 0.0) > time.time():
+        raise ProvedorIndisponivel("em espera por cota do Cloudflare", quota=True)
+
+    if not _cabe_no_orcamento(prazo):
+        raise ProvedorIndisponivel("orçamento de tempo da rotação esgotado")
+
+    headers = {
+        "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messages": [
+            {"role": "system", "content": instrucao_sistema},
+            {"role": "user", "content": prompt_usuario},
+        ],
+        "temperature": 0.4,
+    }
+    url = URL_CLOUDFLARE.format(conta=CLOUDFLARE_ACCOUNT_ID, modelo=CLOUDFLARE_MODEL)
+
+    try:
+        resposta = _post_em_pedacos(url, headers, payload, TIMEOUT_CLOUDFLARE, prazo)
+    except requests.exceptions.RequestException as erro:
+        _quota_bloqueada_ate["cloudflare"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"não respondeu ({type(erro).__name__})") from None
+
+    detalhe = (resposta.text or "").strip()[:160]
+    if resposta.status_code in STATUS_QUE_ATIVAM_ROTACAO or resposta.status_code >= 400:
+        _quota_bloqueada_ate["cloudflare"] = time.time() + (
+            COOLDOWN_QUOTA_PADRAO if resposta.status_code == 429
+            else COOLDOWN_PROVEDOR_FALHA
+        )
+        raise ProvedorIndisponivel(
+            f"HTTP {resposta.status_code}: {detalhe}",
+            quota=(resposta.status_code == 429),
+        )
+
+    try:
+        dados = resposta.json()
+    except ValueError:
+        _quota_bloqueada_ate["cloudflare"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"resposta não é JSON: {detalhe}") from None
+
+    # a API responde {"result": {"response": "..."}}; algumas contas devolvem o
+    # formato da OpenAI na raiz — os dois casos são aceitos aqui
+    resultado = dados.get("result")
+    texto = ""
+    if isinstance(resultado, str):
+        texto = resultado
+    elif isinstance(resultado, dict):
+        texto = resultado.get("response") or ""
+        if not texto and isinstance(resultado.get("choices"), list) and resultado["choices"]:
+            texto = ((resultado["choices"][0] or {}).get("message") or {}).get("content") or ""
+    elif isinstance(dados.get("choices"), list) and dados["choices"]:
+        texto = ((dados["choices"][0] or {}).get("message") or {}).get("content") or ""
+
+    if not str(texto or "").strip():
+        motivo = str((dados.get("errors") or [{}])[0].get("message") or detalhe)[:120]
+        _quota_bloqueada_ate["cloudflare"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"resposta vazia ou com erro: {motivo}")
+
+    registrar_chamada_ia("cloudflare")  # contador do painel de cotas do chat
+    return str(texto)
 
 
 def _mensagem_todos_esgotados(falhas):
@@ -1770,10 +2092,13 @@ def chamar_ia(prompt_usuario, instrucao_sistema):
 
         if str(texto or "").strip():
             _salvar_estado_ias()  # guarda quem ficou de fora para a próxima execução
-            if rotulo == "OpenRouter" and _ultimo_modelo_openrouter:
-                _ultimo_provedor = f"OpenRouter · {_ultimo_modelo_openrouter}"
-            else:
-                _ultimo_provedor = f"{rotulo} · {MODEL_NAME}"
+            modelo_do_rotulo = (
+                _ultimo_modelo_openrouter
+                if rotulo == "OpenRouter" and _ultimo_modelo_openrouter
+                else MISTRAL_MODEL if rotulo == "Mistral"
+                else MODEL_NAME
+            )
+            _ultimo_provedor = f"{rotulo} · {modelo_do_rotulo}"
             _cache_guardar(chave_cache, str(texto), ttl=CACHE_TTL_RESPOSTA_IA)
             return str(texto)
 
@@ -2031,6 +2356,10 @@ def _resumo_configuracao():
         ia.append("Gemini reserva 1")
     if GEMINI_API_KEY_3:
         ia.append("Gemini reserva 2")
+    if MISTRAL_API_KEY:
+        ia.append(f"Mistral ({MISTRAL_MODEL})")
+    if CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID:
+        ia.append(f"Cloudflare Workers AI ({CLOUDFLARE_MODEL})")
     if OPENROUTER_API_KEY:
         ia.append(f"OpenRouter ({len(MODELOS_OPENROUTER_FALLBACK)} modelos)")
 
@@ -2126,10 +2455,24 @@ def criar_app():
             "status": "ok",
             "rotas": [
                 "POST /api/chat",
+                "GET /api/status-ias",
                 "GET /api/health",
                 "DELETE|POST /api/limpar-memoria",
                 "GET /api/graficos/<arquivo>",
             ],
+        })
+
+    @aplicacao.route("/api/status-ias", methods=["GET"])
+    def status_ias():
+        """
+        Painel do chat: quanto ainda resta em cada API da rotação. Responde só com
+        estado local (contadores e cooldowns) — não chama nenhum provedor, então
+        consultar isso não consome cota.
+        """
+        return jsonify({
+            "provedores": status_provedores_ia(),
+            "renovacao_gemini": renovacao_em_texto(),
+            "renovacao_utc": renovacao_em_texto_utc(),
         })
 
     @aplicacao.route("/api/health", methods=["GET"])

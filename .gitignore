@@ -55,6 +55,30 @@ netrc
 .aws/
 .gcloud/
 kubeconfig
+# link local do projeto na Vercel (projectId/orgId da sua maquina)
+.vercel/
+
+# ===========================================================================
+# AGENTE/FERRAMENTA LOCAL (logs de preview e metadados de sessao)
+# ===========================================================================
+
+# .freebuff/ guarda logs do preview e o id do projeto da ferramenta local —
+# nao e codigo do site e nao deve ser versionado nem publicado.
+.freebuff/
+# variante com um "f" a menos, para o diretorio nao escapar por causa do nome
+.freebuf/
+
+# ===========================================================================
+# TOKENS E CHAVES LOCAIS (fora do .env tambem precisam ficar ocultos)
+# ===========================================================================
+
+*.token
+*.tokens
+*token*.json
+*token*.txt
+tokens.json
+.tokens/
+tokens/
 
 # ===========================================================================
 # ESTADO DE EXECUCAO DO AGENTE (uso e memoria por usuario)
@@ -64,6 +88,11 @@ kubeconfig
 back-end/uso_gemini.json*
 # estado dos provedores de IA (quem esta em cooldown) — so runtime
 back-end/estado_ias.json*
+# contador de cota dos demais provedores (Gemini reservas, Mistral, Cloudflare, OpenRouter)
+back-end/uso_ias.json*
+# PNGs dos graficos: saida de execucao (em producao nascem em /tmp e saem por
+# /api/graficos/<arquivo>), nunca codigo do projeto
+back-end/static/graficos/*.png
 # memoria por usuario: contem informacoes pessoais ditas no chat
 back-end/memoria*.json
 memoria*.json
