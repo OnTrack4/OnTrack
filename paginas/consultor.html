@@ -174,7 +174,7 @@
         // backend em serverless não guarda estado
         let memoriaDoUsuario = { fatos: [] };
 
-        // navbar dinamica + histórico sincronizado
+        // navbar dinâmica + histórico sincronizado
         verificarLogin(async (usuario) => {
             usuarioLogado = usuario;
             usuarioUid = usuario?.uid || null;
@@ -233,7 +233,7 @@
             }, (erro) => console.warn('Histórico no Firestore indisponível:', erro));
         }
 
-        // hora incial
+        // hora inicial
         document.getElementById('hora-inicial').textContent = horaAtual();
 
         // enviar a msg
@@ -427,7 +427,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // barra de digitaçao
+        // barra de digitação
         function mostrarIndicador() {
             const container = document.getElementById('chat-container');
 
@@ -497,7 +497,7 @@
             e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
         });
 
-        // funçoes extras
+        // funções extras
         function horaAtual() {
             return new Date().toLocaleTimeString('pt-BR', {
                 hour: '2-digit',
