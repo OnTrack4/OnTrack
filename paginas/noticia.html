@@ -38,7 +38,7 @@
                 <button type="button" onclick="pesquisar()">Buscar</button>
             </div>
 
-            <!-- conectar a api para deixar as noticias -->
+            <!-- conectar a api para deixar as notícias -->
             <div id="lista-noticias">
                 <p>Carregando notícias...</p>
             </div>
@@ -68,7 +68,7 @@
             const plano = dados?.plano || 'basico';
             const nome = dados?.nome || usuario.displayName || 'Usuário';
 
-            // navbar dinamica
+            // navbar dinâmica
             const navUsuario = document.getElementById('nav-usuario');
             navUsuario.innerHTML = `
             <span class="nav-saudacao">Olá, ${nome}</span>
@@ -80,7 +80,7 @@
                 window.location.href = '../index.html';
             });
 
-            // aviso para plano basico
+            // aviso para plano básico
             if (plano === 'basico') {
                 const aviso = document.createElement('div');
                 aviso.classList.add('aviso-basico');
@@ -109,7 +109,7 @@
             const plano = dados?.plano || 'basico';
             const nome = dados?.nome || usuario.displayName || 'Usuário';
 
-            // navbar dinamica
+            // navbar dinâmica
             const navUsuario = document.getElementById('nav-usuario');
             navUsuario.innerHTML = `
             <span class="nav-saudacao">Olá, ${nome}</span>
@@ -121,7 +121,7 @@
                 window.location.href = '../index.html';
             });
 
-            // aviso para plano basico
+            // aviso para plano básico
             if (plano === 'basico') {
                 const aviso = document.createElement('div');
                 aviso.classList.add('aviso-basico');
