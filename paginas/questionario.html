@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="../css/questionario.css">
 
-
 </head>
 
 <body>
@@ -17,7 +16,7 @@
     <header>
         <nav>
             <ul>
-                <li><a href="../index.html">Inicios</a></li>
+                <li><a href="../index.html">Início</a></li>
                 <li><a href="../index.html#planos">Planos</a> </li>
                 <li><a href="perfil.html">Meu Perfil</a></li>
 
@@ -34,7 +33,7 @@
 
             <div class="questionario-header">
                 <h2> Descubra seu perfil de investidor</h2>
-                <p>Responda 5 perguntas rapidas e descubram seu perfil</p>
+                <p>Responda 5 perguntas rápidas e descubra seu perfil</p>
 
                 <div class="progresso-bar">
                     <div class="progresso-fill" id="progresso-fill"></div>
@@ -46,13 +45,12 @@
 
             <div class="questionario-box" id="questionario-box">
 
-
                 <div class="pergunta" id="pergunta-1">
-                    <h3>Qual seu principal objetivo financeiro</h3>
+                    <h3>Qual seu principal objetivo financeiro?</h3>
                     <div class="opcoes">
                         <label class="opcao">
                             <input type="radio" name="p1" value="1">
-                            <span>Preservar meu patrimonio com segurança</span>
+                            <span>Preservar meu patrimônio com segurança</span>
                         </label>
                         <label class="opcao">
                             <input type="radio" name="p1" value="2">
@@ -65,52 +63,51 @@
                     </div>
                 </div>
 
-
                 <div class="pergunta" id="pergunta-2" style="display:none;">
-                    <h3> Em quanto tempo voce espara ver resultandos?</h3>
+                    <h3> Em quanto tempo você espera ver resultados?</h3>
                     <div class=" opcoes">
                         <label class="opcao">
                             <input type="radio" name="p2" value="1">
-                                <span> mais de 5 anos</span>
+                                <span> Mais de 5 anos</span>
                         </label>
                         <label class="opcao">
                             <input type="radio" name="p2" value="2">
-                                <span> menos de 2 anos</span>
+                                <span> Menos de 2 anos</span>
                         </label>
                         <label class="opcao">
                             <input type="radio" name="p2" value="3">
-                                <span> entre 2 e 5 anos</span>
+                                <span> Entre 2 e 5 anos</span>
                         </label>
                     </div>
                 </div>
                     <div class="pergunta" id="pergunta-3" style="display:none">
-                        <h3> como voce reagem se seu investimento cair em 20%</h3>
+                        <h3> Como você reage se seu investimento cair em 20%?</h3>
                         <div class="opcoes">
                             <label class="opcao">
                                 <input type="radio" name="p3" value="1">
-                                    <span>fico muito preocupando e prefiro retirar o dinheiro</span>
+                                    <span>Fico muito preocupado e prefiro retirar o dinheiro</span>
                             </label>
                             <label>
                                 <input type="radio" name="p3" value="2">
-                                    <span>Fico preocuoando mas espero a recuperaçao</span>
+                                    <span>Fico preocupado mas espero a recuperação</span>
                             </label>
                             <label>
                                 <input type="radio" name="p3" value="3">
-                                    <span>vejo isso como uma oportunidade e invisto mais</span>
+                                    <span>Vejo isso como uma oportunidade e invisto mais</span>
                             </label>
                         </div>
                     </div>
 
                     <div class="pergunta" id="pergunta-4" style="display:none">
-                        <h3>Qual porcetagem da sua renda voce estaria disposto(a) a investir</h3>
+                        <h3>Qual porcentagem da sua renda você estaria disposto(a) a investir?</h3>
                         <div class="opcoes">
                             <label>
                                 <input type="radio" name="p4" value="1">
-                                    <span>ate 10%</span>
+                                    <span>Até 10%</span>
                             </label>
                             <label>
                                 <input type="radio" name="p4" value="2">
-                                    <span>entre 10% e 30%</span>
+                                    <span>Entre 10% e 30%</span>
                             </label>
                             <label>
                                 <input type="radio" name="p4" value="3">
@@ -119,8 +116,6 @@
                         </div>
 
                     </div>
-
-
 
                     <div class="pergunta" id="pergunta-5" style="display:none">
                         <h3>Você já investiu antes?</h3>
@@ -163,7 +158,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2026 Ontrack, ainda em processo isso(ate agr nao sei oque adicionar)</p>
+        <p>&copy; 2026 Ontrack, ainda em processo isso (até agora não sei o que adicionar)</p>
     </footer>
 
     <script type="module">
@@ -176,7 +171,7 @@
         let usuarioLogado = null;
 
         // ===========================
-        // NAVBAR DINAMICA
+        // NAVBAR DINÂMICA
         // ===========================
 
         verificarLogin(async (usuario) => {
@@ -258,7 +253,7 @@
             }
 
             // define o perfil baseado na pontuação
-            // minimo: 5 pontos (tudo 1) | maximo: 15 pontos (tudo 3)
+            // mínimo: 5 pontos (tudo 1) | máximo: 15 pontos (tudo 3)
             let perfil;
             if (total <= 8) {
                 perfil = 'conservador';
@@ -341,7 +336,7 @@
         }
 
         // ===========================
-        // REFAZER QUESTIONARIO
+        // REFAZER QUESTIONÁRIO
         // ===========================
 
         window.refazerQuestionario = () => {
@@ -364,10 +359,6 @@
 
     </script>
 
-
-
 </body>
-
-
 
 </html>
