@@ -71,7 +71,7 @@
     <script type="module">
         import { verificarLogin, buscarDadosUsuario, logout } from '../firebase.js';
 
-        // se nao estiver logado, manda pro login
+        // se não estiver logado, manda pro login
         verificarLogin(async (usuario) => {
 
             if (!usuario) {
@@ -79,7 +79,7 @@
                 return;
             }
 
-            // busca os dados do usuario no firestore
+            // busca os dados do usuário no firestore
             const dados = await buscarDadosUsuario(usuario.uid);
 
             // preenche a navbar
