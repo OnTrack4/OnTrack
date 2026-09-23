@@ -239,7 +239,22 @@ SYSTEM_INSTRUCTION = (
     "e diga na resposta qual fonte você usou. Não misture nem substitua pela "
     "cotação de outro provedor: se a fonte citada não aparecer no bloco, avise que "
     "ela não trouxe dado nesta consulta em vez de usar o número de outra. Sem "
-    "nenhuma fonte citada, siga o padrão: use todos os dados disponíveis no bloco."
+    "nenhuma fonte citada, siga o padrão: use todos os dados disponíveis no bloco.\n"
+    "10. NUNCA escreva código de programação na resposta — nada de Python, "
+    "JavaScript, SQL, nome de biblioteca (pandas, yfinance, yahooquery) nem trecho "
+    "como 'ticker.dividends'. O usuário é investidor, não programador: toda "
+    "explicação sai em linguagem de mercado, mesmo quando ele pede um dado que "
+    "você não tem.\n"
+    "11. Faltando no contexto um dado HISTÓRICO (dividendos já pagos, série de "
+    "fechamentos, balanços), não invente número e não mostre caminho técnico para "
+    "chegar nele: diga em uma frase que esse histórico não faz parte do contexto "
+    "desta conversa, explique o conceito em nível comercial — quem decide e aprova "
+    "o provento, as datas de anúncio e de pagamento, a diferença entre dividendo, "
+    "juros sobre capital próprio (JCP) e bonificação, e o que o dividend yield "
+    "representa — e indique onde o usuário encontra a série oficial completa: o "
+    "site Status Invest ou a área de Relações com Investidores (RI) da própria "
+    "empresa, com os avisos aos acionistas. Se o bloco 'Dados de mercado' trouxer "
+    "o dividend yield de 12 meses, use esse número citando a fonte."
 )
 
 CHART_SYSTEM_INSTRUCTION = (
@@ -766,13 +781,22 @@ def mensagem_e_cooldown_de_quota(resposta):
 # ===========================================================================
 
 TIMEOUT_FONTES = 5            # era 8s: fonte lenta não pode travar o chat
+# Endpoints do HG Brasil. O painel clássico (/finance) responde câmbio, índices, BTC
+# e Selic/CDI numa requisição só; o catálogo v2 (/v2/finance/quotes) é o caminho
+# atual para ação da B3 (B3:PETR4), par de moeda (FOREX:USDBRL) e índice
+# (INDEXNYSE:SPX) e é o único que devolve o dividend yield de 12 meses da ação.
+HG_PAINEL_URL = "https://api.hgbrasil.com/finance"
+HG_QUOTES_URL = "https://api.hgbrasil.com/v2/finance/quotes"
+# Twelve Data: /quote é a cotação corrente (e o caminho para ação da B3)
+URL_TWELVE_QUOTE = "https://api.twelvedata.com/quote"
 CACHE_TTL_COTACOES = 300      # era 60s: cotação de 5 min em 5 min já basta para o chat
                               # e reduz 5x o consumo de cota das APIs gratuitas
 CACHE_TTL_FALHAS = 120        # fonte que recusou um ativo não é reconsultada por 2 min
                               # (era o HG Brasil sendo chamado à toa a cada mensagem)
 COOLDOWN_QUOTA_FINANCEIRA = 10 * 60   # após 403/429, a fonte fica em silêncio por 10 min
 MAX_ATIVOS_POR_MENSAGEM = 4
-# A primeira fonte que responde encerra a busca do ativo. Antes as QUATRO fontes eram
+# A primeira fonte que responde encerra a busca do ativo — e essa primeira é a da fila
+# do tipo do ativo (ORDEM_POR_TIPO), não sempre o yfinance. Antes as QUATRO fontes eram
 # consultadas para cada ativo — 16 requisições numa mensagem de 4 ativos, com o yfinance
 # já tendo respondido. Twelve Data free = 8 req/min e 800/dia, Finnhub = 60/min: era
 # cota gratuita queimada sem ganho de informação. As demais fontes continuam sendo
@@ -989,12 +1013,22 @@ ROTULOS_B3 = {
     "PRIO3": "PetroRio ON",
 }
 
-# nome curto que as APIs usam para índices/ativos específicos
+# ticker do catálogo v2 do HG Brasil (formato {fonte}:{símbolo}) para cada índice.
+# O S&P 500 só existe aqui: o painel clássico não lista esse índice.
 MAPA_HG_INDICES = {
+    "^BVSP": "INDEXB3:IBOV",
+    "IFIX": "INDEXB3:IFIX",
+    "^IXIC": "INDEXNASDAQ:IXIC",
+    "^DJI": "INDEXNYSE:DJI",
+    "^GSPC": "INDEXNYSE:SPX",
+}
+
+# chave do MESMO índice no painel clássico (/finance -> results.stocks)
+MAPA_HG_PAINEL = {
     "^BVSP": "IBOVESPA",
-    "^DJI": "DOWJONES",
-    "^IXIC": "NASDAQ",
     "IFIX": "IFIX",
+    "^IXIC": "NASDAQ",
+    "^DJI": "DOWJONES",
 }
 
 
@@ -1077,7 +1111,7 @@ def _simbolo_twelve_data(ativo):
     if tipo == "indice" or tipo == "macro":
         # índices brasileiros não estão disponíveis no plano gratuito
         raise FonteIndisponivel("tipo de ativo não suportado pelo Twelve Data")
-    return simbolo                      # PETR4 (Bovespa) e AAPL funcionam
+    return simbolo  # PETR4 (Bovespa) e AAPL: a exchange da B3 entra só como retry
 
 
 def _simbolo_finnhub(ativo):
@@ -1140,40 +1174,103 @@ def _finance_hgbrasil():
     if cache is not None:
         return cache
 
-    dados = _pedir_json("https://api.hgbrasil.com/finance", params={"key": HGBRASIL_API_KEY})
+    if not HGBRASIL_API_KEY:
+        raise FonteIndisponivel("HG Brasil: chave não configurada")
+
+    dados = _pedir_json(HG_PAINEL_URL, params={"key": HGBRASIL_API_KEY})
     resultados = dados.get("results") or {}
     if not resultados:
         raise FonteIndisponivel("HG Brasil: painel vazio")
     return _cache_guardar(("hgbrasil", "finance"), resultados)
 
 
+def _hg_quotes(tickers):
+    """
+    Uma consulta ao catálogo atual do HG Brasil (v2): 'B3:PETR4', 'FOREX:USDBRL',
+    'INDEXNYSE:SPX'... A resposta vem em results[] com quote.value/change_percent,
+    market.high/low e dividends.yield_12m_percent.
+    """
+    if not HGBRASIL_API_KEY:
+        raise FonteIndisponivel("HG Brasil: chave não configurada")
+
+    dados = _pedir_json(HG_QUOTES_URL, params={"key": HGBRASIL_API_KEY, "tickers": tickers})
+    if not isinstance(dados, dict) or dados.get("valid_key") is False:
+        raise FonteIndisponivel("HG Brasil: chave recusada")
+
+    resultados = dados.get("results")
+    if isinstance(resultados, dict) and resultados.get("error"):
+        raise FonteIndisponivel(
+            f"HG Brasil: {str(resultados.get('message') or 'consulta recusada')[:80]}"
+        )
+    if isinstance(resultados, list):
+        for item in resultados:
+            if isinstance(item, dict) and _float((item.get("quote") or {}).get("value")):
+                return item
+    raise FonteIndisponivel(f"HG Brasil: sem cotação para {tickers}")
+
+
+def _cotacao_do_item_hg(item, ativo, simbolo=None):
+    """Converte um item de results[] do HG Brasil na cotação interna do OnTrack."""
+    quote = item.get("quote") or {}
+    mercado = item.get("market") or {}
+    cotacao = {
+        "fonte": "HG Brasil",
+        "simbolo": simbolo or str(item.get("symbol") or ativo["simbolo"]),
+        "preco": _float(quote.get("value")),
+        "variacao_percentual": _float(quote.get("change_percent")),
+        "alta": _float(mercado.get("high")),
+        "baixa": _float(mercado.get("low")),
+        "unidade": _unidade_do_ativo(ativo),
+    }
+    if ativo["tipo"] in ("acao_b3", "acao_us"):
+        # o HG manda o dividend yield de 12 meses junto da cotação: é o único dado de
+        # provento que o contexto do chat tem, e evita a IA responder dividendo
+        # "de cabeça" (ou pior, com trecho de código)
+        cotacao["dividendos_12m"] = _float(
+            (item.get("dividends") or {}).get("yield_12m_percent")
+        )
+    return cotacao
+
+
 def _cotacao_hgbrasil(ativo):
+    """
+    Cotação pelo HG Brasil. Ação da B3, câmbio e índice saem do catálogo atual (v2),
+    que é o caminho documentado hoje: a rota antiga de ações (/finance/stock_price)
+    exigia plano pago e devolvia erro para toda ação da B3 — era o motivo de a
+    integração do HG Brasil 'nunca trazer cotação'. O painel clássico fica como
+    segunda tentativa de câmbio e de índice e como fonte de BTC e Selic/CDI.
+    """
     tipo, simbolo = ativo["tipo"], ativo["simbolo"]
 
-    if tipo in ("acao_b3", "acao_us"):
-        # cotações de ações exigem plano Member Premium; sem plano a API devolve
-        # {"results": {"error": true, ...}} — tratado como fonte indisponível
-        dados = _pedir_json(
-            "https://api.hgbrasil.com/finance/stock_price",
-            params={"key": HGBRASIL_API_KEY, "symbol": simbolo},
-        )
-        resultados = dados.get("results") or {}
-        if resultados.get("error"):
-            raise FonteIndisponivel("HG Brasil: cotações de ações exigem plano pago")
-        preco = _float(resultados.get("price"))
-        if not preco:
-            raise FonteIndisponivel("HG Brasil: preço de ação indisponível")
-        return {
-            "fonte": "HG Brasil",
-            "simbolo": simbolo,
-            "preco": preco,
-            "variacao_percentual": _float(resultados.get("change_percent")),
-            "alta": _float(resultados.get("high")),
-            "baixa": _float(resultados.get("low")),
-            "unidade": _unidade_do_ativo(ativo),
-        }
+    if tipo == "acao_b3":
+        return _cotacao_do_item_hg(_hg_quotes(f"B3:{simbolo}"), ativo)
 
-    painel = _finance_hgbrasil()
+    if tipo == "acao_us":
+        # o catálogo do HG Brasil é a B3 (ação, FII, ETF e BDR): pedir ação dos EUA
+        # aqui só queimaria uma requisição para receber erro
+        raise FonteIndisponivel("HG Brasil: sem catálogo de ações internacionais")
+
+    if tipo == "moeda":
+        try:
+            return _cotacao_do_item_hg(_hg_quotes(f"FOREX:{simbolo}"), ativo)
+        except FonteIndisponivel:
+            pass  # painel clássico: cobre as principais moedas contra o real
+
+    if tipo == "indice":
+        ticker = MAPA_HG_INDICES.get(simbolo)
+        if not ticker:
+            raise FonteIndisponivel("HG Brasil: índice não disponível")
+        try:
+            return _cotacao_do_item_hg(_hg_quotes(ticker), ativo)
+        except FonteIndisponivel:
+            pass  # painel clássico: Ibovespa, IFIX, Nasdaq e Dow Jones
+
+    return _cotacao_do_painel_hgbrasil(_finance_hgbrasil(), ativo)
+
+
+def _cotacao_do_painel_hgbrasil(painel, ativo):
+    """Câmbio, índices, bitcoin e Selic/CDI do painel clássico /finance."""
+    tipo, simbolo = ativo["tipo"], ativo["simbolo"]
 
     if tipo == "moeda":
         base, cotacao = simbolo[:3], simbolo[3:]
@@ -1220,7 +1317,7 @@ def _cotacao_hgbrasil(ativo):
         }
 
     if tipo == "indice":
-        chave = MAPA_HG_INDICES.get(simbolo)
+        chave = MAPA_HG_PAINEL.get(simbolo)
         if not chave:
             raise FonteIndisponivel("HG Brasil: índice não disponível")
         indice = (painel.get("stocks") or {}).get(chave)
@@ -1293,10 +1390,21 @@ def _cotacao_twelve_data(ativo):
         raise FonteIndisponivel("Twelve Data: chave não configurada")
 
     simbolo = _simbolo_twelve_data(ativo)  # pode levantar FonteIndisponivel
-    dados = _pedir_json(
-        "https://api.twelvedata.com/quote",
-        params={"symbol": simbolo, "apikey": TWELVE_DATA_API_KEY},
-    )
+    parametros = {"symbol": simbolo, "apikey": TWELVE_DATA_API_KEY}
+    dados = _pedir_json(URL_TWELVE_QUOTE, params=parametros)
+    if not isinstance(dados, dict):
+        raise FonteIndisponivel("Twelve Data: resposta em formato inesperado")
+
+    if (dados.get("status") == "error" or dados.get("code")) and ativo["tipo"] == "acao_b3":
+        # o ticker da B3 sozinho pode não ser suficiente para o Twelve Data resolver o
+        # papel: a segunda tentativa diz a exchange pelo nome que a própria API usa
+        # (B3 Bovespa, MIC BVMF). Só acontece quando a primeira recusa, então no caminho
+        # normal continua sendo uma requisição por ativo — e a fonte deixa de depender
+        # de o ticker nu resolver sozinho
+        parametros["exchange"] = "Bovespa"
+        dados = _pedir_json(URL_TWELVE_QUOTE, params=parametros)
+        if not isinstance(dados, dict):
+            raise FonteIndisponivel("Twelve Data: resposta em formato inesperado")
 
     if dados.get("status") == "error" or dados.get("code"):
         raise FonteIndisponivel(f"Twelve Data: {str(dados.get('message'))[:80]}")
@@ -1316,19 +1424,43 @@ def _cotacao_twelve_data(ativo):
     }
 
 
-# ordem de preferência: a primeira fonte que responder entra como principal
+# Catálogo das fontes: nome canônico (o mesmo rótulo que aparece no bloco 'Dados de
+# mercado') -> função de consulta. A ordem aqui é só a ordem de LEITURA do bloco.
 FONTES_FINANCEIRAS = (
     ("yfinance", _cotacao_yfinance),
     ("HG Brasil", _cotacao_hgbrasil),
     ("Finnhub", _cotacao_finnhub),
     ("Twelve Data", _cotacao_twelve_data),
 )
+ORDEM_PADRAO = tuple(nome for nome, _ in FONTES_FINANCEIRAS)
+FUNCOES_FONTES = dict(FONTES_FINANCEIRAS)
 
-# yfinance roda sozinho, no thread principal (a biblioteca mantém sessão própria).
-# As APIs REST são independentes entre si e vão em paralelo: antes, a soma dos
-# timeouts delas era o que inflava a espera quando alguma fonte estava lenta.
-FONTES_SEQUENCIAIS = tuple(fonte for fonte in FONTES_FINANCEIRAS if fonte[0] == "yfinance")
-FONTES_PARALELAS = tuple(fonte for fonte in FONTES_FINANCEIRAS if fonte[0] != "yfinance")
+# Ordem de consulta POR TIPO DE ATIVO. Antes havia uma ordem única, com o yfinance
+# sempre na frente, e como a primeira fonte que responde encerra a busca do ativo as
+# outras praticamente nunca eram acionadas: o HG Brasil só entrava quando o yfinance
+# falhava e o Twelve Data/Finnhub não eram chamados em pergunta de ação da B3 — daí a
+# impressão (correta) de integração configurada que nunca é usada. A ordem é por
+# competência de cada uma:
+#
+#   * HG Brasil — catálogo B3/FOREX/índices da API v2, que é o único que traz o
+#     dividend yield de 12 meses da ação, e o painel clássico, única fonte de
+#     Selic/CDI. Um painel só responde câmbio, índices e taxas, então ele vem
+#     primeiro onde é forte.
+#   * yfinance — gratuito e sem chave, bom em ação (B3 e EUA) e cripto; segue
+#     primeiro na B3 para não queimar cota das APIs com chave em pergunta de preço.
+#   * Finnhub — ação dos EUA e cripto (B3 e câmbio ficam fora do plano gratuito).
+#   * Twelve Data — B3 e ação dos EUA; recusa índices e indicadores macro.
+# Tipo que não esteja aqui cai em ORDEM_PADRAO e, em qualquer caso, as fontes que
+# faltarem entram como fallback no fim da fila (ver _ordem_fontes): uma integração
+# nova passa a ser consultada sem editar esta tabela.
+ORDEM_POR_TIPO = {
+    "moeda": ("HG Brasil", "yfinance", "Twelve Data"),
+    "indice": ("HG Brasil", "yfinance"),
+    "macro": ("HG Brasil",),
+    "acao_b3": ("yfinance", "HG Brasil", "Twelve Data"),
+    "acao_us": ("yfinance", "Finnhub", "Twelve Data"),
+    "cripto": ("yfinance", "Finnhub", "Twelve Data", "HG Brasil"),
+}
 
 # Como o usuário pode pedir uma fonte na própria pergunta. O apelido aponta para o nome
 # canônico — o mesmo rótulo que aparece no bloco 'Dados de mercado' — porque é por ele
@@ -1363,34 +1495,49 @@ def fonte_citada(mensagem):
     return None
 
 
-def _consultar_fonte(nome, funcao, ativo):
+# Pergunta sobre provento: é o caso em que o HG Brasil passa na frente para ação da
+# B3, porque é a única integração do contexto que traz um número de dividendo — o
+# yield de 12 meses que vem junto da cotação no catálogo v2.
+PALAVRAS_PROVENTOS = (
+    "dividend", "provento", "jcp", "juros sobre capital", "bonificacao", "data-com",
+)
+
+
+def pergunta_sobre_proventos(mensagem):
+    """True quando a pergunta é sobre dividendo/JCP/bonificação (texto normalizado)."""
+    texto = _normalizar(mensagem)
+    return any(palavra in texto for palavra in PALAVRAS_PROVENTOS)
+
+
+def _consultar_fonte(nome, funcao, ativo, forcar=False):
     """
     Executa UMA fonte para UM ativo, isolando toda falha: cota estourada,
     timeout, conexão, símbolo fora do plano ou resposta estranha apenas fazem
     esta consulta devolver None. Nada é mostrado ao usuário.
-    """
-    chave_cooldown = (nome, ativo["simbolo"], ativo["tipo"])
-    if _fontes_bloqueadas.get(chave_cooldown, 0.0) > time.time():
-        return None  # fonte em silêncio depois de 403/429
 
+    `forcar` vale para a fonte pedida pelo usuário na própria pergunta: nesse caso a
+    consulta ignora o cache negativo e o cooldown. Os dois são marcas de silêncio de
+    uma tentativa anterior (rede, cota, plano) e não podem esconder justamente a fonte
+    que ele mandou usar. O cache POSITIVO continua valendo — é o dado daquela mesma
+    fonte, e reaproveitá-lo é o que segura o consumo das APIs gratuitas.
+    """
     chave_cache = ("cotacao", nome, ativo["simbolo"], ativo["tipo"])
     em_cache = _cache_ler(chave_cache)
     if em_cache is not None:
         return em_cache
 
-    # cache negativo: evita repetir a chamada de uma fonte que já recusou este ativo
-    # (ex.: HG Brasil sem plano para ações), que era custo fixo em toda mensagem
+    chave_cooldown = (nome, ativo["simbolo"], ativo["tipo"])
     chave_falha = ("falha", nome, ativo["simbolo"], ativo["tipo"])
-    if _cache_ler(chave_falha) is not None:
-        return None
+    if not forcar:
+        if _fontes_bloqueadas.get(chave_cooldown, 0.0) > time.time():
+            return None  # fonte em silêncio depois de 403/429
+
+        # cache negativo: evita repetir a chamada de uma fonte que já recusou este ativo
+        # (ex.: HG Brasil sem plano para ações), que era custo fixo em toda mensagem
+        if _cache_ler(chave_falha) is not None:
+            return None
 
     _medidor_contar("fontes")  # só a consulta que realmente sai conta
-
-    # cache negativo: evita repetir a chamada de uma fonte que já recusou este ativo
-    # (ex.: HG Brasil sem plano para ações), que era custo fixo em toda mensagem
-    chave_falha = ("falha", nome, ativo["simbolo"], ativo["tipo"])
-    if _cache_ler(chave_falha) is not None:
-        return None
 
     try:
         cotacao = funcao(ativo)
@@ -1411,34 +1558,57 @@ def _consultar_fonte(nome, funcao, ativo):
     return _cache_guardar(chave_cache, cotacao)
 
 
-def _coletar_cotacoes(ativo, fonte_unica=None):
+def _ordem_fontes(ativo, preferida=None):
+    """
+    Fontes na ordem em que devem ser tentadas para ESTE ativo: primeiro a `preferida`
+    (a fonte que o usuário pediu ou a que traz o dado que a pergunta precisa, como o
+    dividend yield do HG Brasil em pergunta de proventos), depois a ordem do tipo do
+    ativo (ORDEM_POR_TIPO) e, por fim, as fontes que não aparecem em nenhuma das duas
+    — assim uma integração nova entra como fallback em todos os tipos em vez de ficar
+    sem uso sem ninguém notar.
+    """
+    candidatas = (preferida,) + tuple(ORDEM_POR_TIPO.get(ativo["tipo"], ())) + ORDEM_PADRAO
+    ordem = []
+    for nome in candidatas:
+        if nome and nome in FUNCOES_FONTES and nome not in ordem:
+            ordem.append(nome)
+    return ordem
+
+
+def _coletar_cotacoes(ativo, fonte_unica=None, preferida=None):
     """
     Consulta as fontes de um ativo e devolve só o que respondeu, sempre na ordem de
     FONTES_FINANCEIRAS (o paralelismo não pode mudar a ordem do contexto).
 
-    Com UMA_FONTE_POR_ATIVO, a primeira que responder encerra a busca do ativo: é o
-    fallback — as demais só entram quando ela falha — e é o que corta a maior parte
-    das requisições às APIs gratuitas.
+    Sem `fonte_unica`, a primeira fonte da fila daquele tipo de ativo é consultada
+    sozinha; com UMA_FONTE_POR_ATIVO ela encerra a busca, porque as demais são o
+    fallback — é o que corta a maior parte das requisições às APIs gratuitas.
 
     Com `fonte_unica`, SÓ essa fonte é consultada e não há fallback: o usuário pediu
     por ela e o número tem de ser dela. Sem dado, o ativo simplesmente não entra no
-    bloco (a IA é instruída a avisar, em vez de trocar de provedor em silêncio).
+    bloco (a IA é instruída a avisar, em vez de trocar de provedor em silêncio). Como
+    o pedido foi explícito, essa consulta passa por cima do cache negativo e do
+    cooldown — uma falha (ou uma recusa de plano) de antes não pode esconder a
+    integração que ele mandou usar.
     """
-    resultados = {}
-
     if fonte_unica:
-        for nome, funcao in FONTES_FINANCEIRAS:
-            if nome != fonte_unica:
-                continue
-            try:
-                cotacao = _consultar_fonte(nome, funcao, ativo)
-            except Exception:
-                cotacao = None
-            return [cotacao] if cotacao else []
-
-    for nome, funcao in FONTES_SEQUENCIAIS:
+        funcao = FUNCOES_FONTES.get(fonte_unica)
+        if not funcao:
+            return []
         try:
-            cotacao = _consultar_fonte(nome, funcao, ativo)
+            cotacao = _consultar_fonte(fonte_unica, funcao, ativo, forcar=True)
+        except Exception:
+            cotacao = None
+        return [cotacao] if cotacao else []
+
+    resultados = {}
+    fila = _ordem_fontes(ativo, preferida)
+
+    # 1) a fonte preferida do ativo, sozinha: no caso comum é uma requisição só
+    if fila:
+        nome = fila[0]
+        try:
+            cotacao = _consultar_fonte(nome, FUNCOES_FONTES[nome], ativo)
         except Exception:
             cotacao = None
         if cotacao:
@@ -1446,11 +1616,27 @@ def _coletar_cotacoes(ativo, fonte_unica=None):
             if UMA_FONTE_POR_ATIVO:
                 return [cotacao]
 
-    if FONTES_PARALELAS:
-        with ThreadPoolExecutor(max_workers=len(FONTES_PARALELAS)) as executor:
+    # 2) o yfinance, quando não foi o preferido, roda sozinho no thread da requisição:
+    # a biblioteca mantém sessão própria e não foi feita para dois threads ao mesmo tempo
+    restantes = fila[1:]
+    if "yfinance" in restantes:
+        try:
+            cotacao = _consultar_fonte("yfinance", _cotacao_yfinance, ativo)
+        except Exception:
+            cotacao = None
+        if cotacao:
+            resultados["yfinance"] = cotacao
+            if UMA_FONTE_POR_ATIVO:
+                return [cotacao]
+        restantes = [nome for nome in restantes if nome != "yfinance"]
+
+    # 3) as APIs REST restantes, em paralelo: são independentes entre si e a soma dos
+    # timeouts delas era o que inflava a espera quando alguma fonte estava lenta
+    if restantes:
+        with ThreadPoolExecutor(max_workers=len(restantes)) as executor:
             futuros = {
-                executor.submit(_consultar_fonte, nome, funcao, ativo): nome
-                for nome, funcao in FONTES_PARALELAS
+                executor.submit(_consultar_fonte, nome, FUNCOES_FONTES[nome], ativo): nome
+                for nome in restantes
             }
             for futuro, nome in futuros.items():
                 try:
@@ -1470,6 +1656,9 @@ def _linha_cotacao(cotacao):
         partes.append(f"alta {_formatar_numero(cotacao.get('alta'))}")
     if cotacao.get("baixa") is not None:
         partes.append(f"baixa {_formatar_numero(cotacao.get('baixa'))}")
+    dividendos = cotacao.get("dividendos_12m")
+    if dividendos:  # 0 significa "sem provento no período": não polui a linha
+        partes.append(f"dividend yield de 12 meses {_formatar_numero(dividendos)}%")
     return " | ".join(partes)
 
 
@@ -1496,11 +1685,17 @@ def coletar_dados_financeiros(mensagem):
         return resultado
 
     fonte_unica = fonte_citada(mensagem)
+    # pergunta de proventos: para ação da B3 o HG Brasil passa na frente (uma
+    # requisição, e só nesse tipo de pergunta), porque é ele que traz o dividend yield
+    # de 12 meses junto da cotação — sem isso o contexto não tem nenhum número de
+    # dividendo e a IA responde sobre provento sem dado nenhum
+    quer_proventos = pergunta_sobre_proventos(mensagem)
     dados_por_ativo = []
     fontes_usadas = []
 
     for ativo in ativos:
-        cotacoes = _coletar_cotacoes(ativo, fonte_unica)
+        preferida = "HG Brasil" if quer_proventos and ativo["tipo"] == "acao_b3" else None
+        cotacoes = _coletar_cotacoes(ativo, fonte_unica, preferida)
         for cotacao in cotacoes:
             if cotacao["fonte"] not in fontes_usadas:
                 fontes_usadas.append(cotacao["fonte"])
@@ -1527,10 +1722,13 @@ def coletar_dados_financeiros(mensagem):
     # de minuto mudava o texto a cada 60s e invalidava o cache de resposta da IA — que
     # é justamente o passo caro da mensagem. Os números já vêm do cache de cotações.
     # a fonte pedida entra na chave: sem isso, um bloco só com números do Finnhub
-    # (ou só com os do yfinance) seria reaproveitado de uma pergunta anterior
+    # (ou só com os do yfinance) seria reaproveitado de uma pergunta anterior. O
+    # assunto entra pelo mesmo motivo: o bloco de uma pergunta de proventos traz um
+    # dado (o dividend yield) que o bloco de uma pergunta de preço não tem
     chave_bloco = (
         "bloco",
         fonte_unica,
+        "proventos" if quer_proventos else "cotacao",
         tuple((ativo["simbolo"], ativo["tipo"]) for ativo, _ in dados_por_ativo),
     )
     em_cache = _cache_ler(chave_bloco)
@@ -1553,7 +1751,10 @@ def coletar_dados_financeiros(mensagem):
             linhas.append(f"    • {cotacao['fonte']}: {_linha_cotacao(cotacao)}")
     linhas.append(
         "Use esses valores como cotação recente, cite a fonte de cada número e, "
-        "onde as fontes divergirem, deixe claro que há divergência entre provedores."
+        "onde as fontes divergirem, deixe claro que há divergência entre provedores. "
+        "Quando a linha trouxer 'dividend yield de 12 meses', esse é o único número de "
+        "provento disponível: use-o ao falar de dividendos e não invente a série "
+        "histórica nem escreva código para obtê-la."
     )
 
     resultado["bloco"] = "\n".join(linhas)
