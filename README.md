@@ -131,12 +131,14 @@ OnTrack/
   chave; o arquivo é lido pelo caminho dele, não pelo diretório atual.
 - **`RequestsDependencyWarning: urllib3 ... doesn't match a supported version`** — apenas
   aviso de versões do `urllib3`/`chardet` na máquina; não impede a execução.
-- **Aviso de cota no fim da resposta** — o agente conta localmente as chamadas bem-sucedidas do
-  dia em `back-end/uso_gemini.json` e, quando a cota diária está acabando (faltando 20% ou 3
-  chamadas), acrescenta ao fim da resposta quantas restam e a data/hora da próxima renovação
-  (meia-noite do Pacífico, exibida no horário de Brasília). O contador zera sozinho a cada
-  renovação e o arquivo é ignorado pelo git. Nesses avisos o chat mostra um botão
-  **Tentar novamente**, que reenvia a mesma pergunta sem precisar digitá-la de novo.
+- **Nenhum contador de cota na interface** — o chat não exibe quanto resta em cada API. O
+  contador local (`back-end/uso_ias.json`, escrito a partir das chamadas bem-sucedidas do dia)
+  existe só para o diagnóstico interno da rota `GET /api/status-ias`, porque em serverless ele é
+  por instância (vive no `/tmp` e zera a frio) e não representa a cota real da conta: mostrar esse
+  número ao usuário seria exibir informação incorreta. O controle de limite de verdade continua
+  sendo o tratamento do HTTP 429 na rotação. Os arquivos de contador são ignorados pelo git.
+  Quando nenhum provedor responde, o chat mostra o botão **Tentar novamente**, que reenvia a mesma
+  pergunta sem precisar digitá-la de novo.
 - **Mensagem sobre cota/limite do Gemini (HTTP 429)** — o plano gratuito tem limite de
   requisições por minuto e por dia. Cada mensagem faz **uma única** tentativa na API: ao receber
   429 o backend devolve a explicação ao usuário e entra em espera (60 s para limite por minuto,

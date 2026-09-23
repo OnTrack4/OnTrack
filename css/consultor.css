@@ -160,67 +160,6 @@
 }
 
 /* área de input */
-/* ---------- cotas das APIs (acima do campo de pergunta) ---------- */
-
-.composer-cotas {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-}
-
-.cota-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid var(--cinza-borda);
-    border-radius: 999px;
-    background-color: #f5f7fa;
-    font-size: 11.5px;
-    color: #5b6b7c;
-    cursor: help;
-}
-
-.cota-nome {
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.cota-numero {
-    color: var(--azul);
-    font-weight: 600;
-}
-
-.cota-off .cota-numero {
-    color: #8b99b0;
-}
-
-.cota-espera {
-    border-color: #e0cf9a;
-}
-
-.cota-espera .cota-numero {
-    color: #b8860b;
-}
-
-.cota-fim {
-    border-color: #e0b4b4;
-}
-
-.cota-fim .cota-numero {
-    color: #c0392b;
-}
-
-.cota-legenda,
-.cota-vazia {
-    font-size: 11px;
-    color: #8b99b0;
-}
 
 .chat-input-area {
     width: 100%;

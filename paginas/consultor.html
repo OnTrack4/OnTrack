@@ -49,11 +49,6 @@
             </div>
 
             <!-- área de entrada -->
-            <!-- cotas das APIs: quanto ainda resta em cada uma hoje (GET /api/status-ias) -->
-            <div class="composer-cotas" id="consultor-cotas">
-                <span class="cota-vazia">verificando as cotas das APIs...</span>
-            </div>
-
             <div class="chat-input-area">
                 <textarea
                     id="input-mensagem"
@@ -305,7 +300,6 @@
                 btn.disabled = false;
                 document.getElementById('btn-enviar-texto').textContent = 'Enviar';
                 enviandoConsultor = false;
-                atualizarCotas();  // a resposta consumida move os contadores do painel
             }
         };
 

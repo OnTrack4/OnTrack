@@ -20,14 +20,20 @@ Camadas novas:
      estourada (403/429/quota exceeded), timeout ou falha de conexão apenas
      descartam aquela fonte, e a resposta segue com as demais. Se todas
      falharem, o prompt continua limpo e a IA responde com conhecimento geral.
-  2. Rotação sequencial de IAs — Gemini principal, 2 chaves reservas do Gemini,
-     a Mistral, o Cloudflare Workers AI e o OpenRouter (com lista de modelos).
-     Nunca há requisições paralelas: cada
-     provedor só é acionado quando o anterior realmente não conseguiu
-     responder (HTTP 429/503, erro de chave/modelo, 5xx ou falha de rede).
-  3. Painel de cotas no chat — GET /api/status-ias informa quantas requisições já
-     saíram hoje em CADA provedor e quanto resta até a renovação. O contador mora
-     em uso_ias.json e é lido sem chamar nenhuma API.
+  2. Rotação sequencial de IAs — a cadeia começa no Gemini principal e segue para
+     as duas chaves reservas do Gemini, a Mistral, o Cloudflare Workers AI e o
+     OpenRouter (com lista de modelos); o Claude (Anthropic, POST /v1/messages)
+     fecha a fila, como último recurso. Nunca há requisições paralelas: cada
+     provedor só é acionado quando o anterior realmente não conseguiu responder
+     (HTTP 429/503, erro de chave/modelo, 5xx ou falha de rede). A ordem está em
+     _candidatos_ia() e o conjunto que a rotação PODE acionar é
+     PROVEDORES_IA_AUTORIZADOS — hoje com todos os provedores; quem sair dessa
+     tupla fica desligado (sem apagar o código) na rotação e nas travas de entrada.
+  3. Estado das IAs para diagnóstico — GET /api/status-ias devolve o estado local dos
+     provedores (chamadas do dia + cooldowns) a partir de uso_ias.json, sem chamar
+     nenhuma API. É endpoint interno: nenhum número de cota é exibido na interface do
+     chat, porque o contador é por instância (em serverless vive no /tmp e zera a frio)
+     e não representa a cota real da conta.
 
 Nenhum erro de API externa derruba o backend nem interrompe o chat.
 """
@@ -169,13 +175,26 @@ HGBRASIL_API_KEY = _chave("HGBRASIL_API_KEY")
 FINNHUB_API_KEY = _chave("FINNHUB_API_KEY")
 TWELVE_DATA_API_KEY = _chave("TWELVE_DATA_API_KEY")
 
-# IAs da rotação: a primeira tentativa usa GEMINI_API_KEY, seguida das reservas
-# GEMINI_API_KEY_2 e GEMINI_API_KEY_3, depois a Mistral e, por último, o OpenRouter
+# notícias de mercado (GNews + Marketaux): lidas SÓ pelo backend — a rota
+# /api/noticias consulta as duas APIs e devolve o resultado já unificado, então a
+# chave nunca é enviada ao navegador (onde qualquer visitante a veria no DevTools)
+# nem fica no repositório.
+GNEWS_API_KEY = _chave("GNEWS_API_KEY")
+MARKETAUX_API_KEY = _chave("MARKETAUX_API_KEY")
+
+# IAs da rotação, na ordem da cadeia: primeiro as três chaves do Gemini, depois a
+# Mistral, o Cloudflare Workers AI e o OpenRouter e, por último, o Claude — que só
+# é acionado se todos os anteriores falharem. Trocar a ordem é só mover as linhas
+# de _candidatos_ia().
 OPENROUTER_API_KEY = _chave("OPENROUTER_API_KEY")
 GEMINI_API_KEY = _chave("GEMINI_API_KEY")
 GEMINI_API_KEY_2 = _chave("GEMINI_API_KEY_2")
 GEMINI_API_KEY_3 = _chave("GEMINI_API_KEY_3")
 MISTRAL_API_KEY = _chave("MISTRAL_API_KEY")
+# Claude (Anthropic) — provedor ativo do chat. A chave vive no back-end/.env
+# (ignorado pelo Git) e nunca no código: sem ela o provedor fica desativado e o
+# chat avisa, em vez de acionar qualquer outra IA.
+CLAUDE_API_KEY = _chave("CLAUDE_API_KEY")
 # Cloudflare Workers AI: token e account id andam juntos — sem os dois o provedor
 # fica desativado e a rotação simplesmente segue para o próximo.
 CLOUDFLARE_API_TOKEN = _chave("CLOUDFLARE_API_TOKEN")
@@ -211,7 +230,16 @@ SYSTEM_INSTRUCTION = (
     "são cotações recentes coletadas de fontes públicas nesta mesma mensagem: "
     "use esses números em vez de estimar, informe a fonte e a hora da coleta e, "
     "se as fontes divergirem entre si, diga isso. Nunca invente uma cotação que "
-    "não esteja no bloco nem no seu conhecimento."
+    "não esteja no bloco nem no seu conhecimento.\n"
+    "8. Quando a resposta for longa, divida-a em blocos curtos e progressivos "
+    "(um tópico ou passo por bloco), em vez de escrever um texto único e extenso.\n"
+    "9. Se a pergunta citar EXPLICITAMENTE uma fonte de dados de mercado "
+    "(yfinance/Yahoo Finance, HG Brasil, Finnhub, Twelve Data ou o blog da "
+    "Economatica), use SOMENTE os números dessa fonte no bloco 'Dados de mercado' "
+    "e diga na resposta qual fonte você usou. Não misture nem substitua pela "
+    "cotação de outro provedor: se a fonte citada não aparecer no bloco, avise que "
+    "ela não trouxe dado nesta consulta em vez de usar o número de outra. Sem "
+    "nenhuma fonte citada, siga o padrão: use todos os dados disponíveis no bloco."
 )
 
 CHART_SYSTEM_INSTRUCTION = (
@@ -224,7 +252,10 @@ CHART_SYSTEM_INSTRUCTION = (
     '"eixo_y": "string", "labels": ["a", "b", "..."], "valores": [0.0, 0.0]}\n'
     "Se não houver dados confiáveis suficientes, ainda assim devolva sua "
     "melhor estimativa aproximada nesse mesmo formato JSON — nunca fuja do "
-    "formato e nunca escreva texto fora do JSON."
+    "formato e nunca escreva texto fora do JSON. Se a pergunta citar "
+    "explicitamente uma fonte de dados de mercado, use no gráfico SOMENTE os "
+    "números dessa fonte e, se ela não aparecer no contexto, siga a regra acima "
+    "de melhor estimativa aproximada."
 )
 
 PALAVRAS_GRAFICO = ["gráfico", "grafico", "chart", "plot", "plotar", "plote"]
@@ -509,43 +540,13 @@ def aprender_limite_diario(limite, esgotado=False):
     return dados
 
 
-def aviso_de_cota():
-    """
-    Aviso preventivo para o chat quando a cota diária da chave principal está
-    acabando (faltando 20% ou menos, ou 3 chamadas ou menos). Vazio enquanto há folga.
-    """
-    dados = ler_uso_gemini()
-    limite = max(dados["limite"], 1)
-    restantes = max(limite - dados["chamadas"], 0)
-
-    if restantes > max(3, round(limite * 0.2)):
-        return ""
-
-    if restantes == 0:
-        return (
-            f"⚠️ Cota diária do Gemini principal esgotada ({dados['chamadas']} de {limite} chamadas). "
-            f"As chaves reservas e o OpenRouter seguem atendendo. A próxima renovação é em "
-            f"{renovacao_em_texto()} (horário de Brasília)."
-        )
-
-    return (
-        f"⚠️ Cota diária do Gemini principal quase no fim: restam {restantes} de {limite} chamadas. "
-        f"A próxima renovação é em {renovacao_em_texto()} (horário de Brasília)."
-    )
-
-
-def resposta_com_aviso_de_cota(texto):
-    """Acrescenta o aviso preventivo de cota ao texto que vai para o chat."""
-    aviso = aviso_de_cota()
-    return f"{texto}\n\n{aviso}" if aviso else texto
-
-
 # ---------------------------------------------------------------------------
 # COTA DOS PROVEDORES DA ROTAÇÃO (contador local por dia de renovação)
 #
-# O aviso acima cobre só a chave principal do Gemini. Como o chat passa a mostrar
-# quantas requisições restam em CADA API, o consumo de todos os provedores é
-# contado aqui, em arquivo próprio (uso_ias.json). O "dia" de cada contador é o dia
+# Esse contador serve só ao diagnóstico interno (rota /api/status-ias): nenhum número
+# de cota é exibido no chat nem anexado à resposta da IA — o contador é por instância,
+# não reflete a cota real da conta. O consumo de todos os provedores é contado aqui, em
+# arquivo próprio (uso_ias.json). O "dia" de cada contador é o dia
 # em que a cota daquele provedor realmente renova: meia-noite do Pacífico para o
 # Gemini e meia-noite UTC para Mistral, Cloudflare e OpenRouter.
 # ---------------------------------------------------------------------------
@@ -553,9 +554,12 @@ def resposta_com_aviso_de_cota(texto):
 ARQUIVO_USO_IAS = os.path.join(DIR_ESTADO, "uso_ias.json")
 
 # Tetos diários conhecidos dos planos gratuitos. None = o provedor não limita por
-# requisição/dia; nesse caso o painel do chat mostra o consumo e a explicação de
+# requisição/dia; nesse caso o diagnóstico devolve consumido + a explicação de
 # NOTAS_LIMITE_IA em vez de um número de "restantes" enganoso.
 LIMITES_DIARIOS_IA = {
+    # o Claude cobra por token e limita por minuto, não por requisições/dia:
+    # None = não há teto fixo por requisição (o diagnóstico mostra a nota abaixo)
+    "claude": None,
     "gemini_principal": LIMITE_DIARIO_PADRAO,
     "gemini_reserva_1": LIMITE_DIARIO_PADRAO,
     "gemini_reserva_2": LIMITE_DIARIO_PADRAO,
@@ -565,6 +569,7 @@ LIMITES_DIARIOS_IA = {
 }
 
 FUSOS_RENOVACAO_IA = {
+    "claude": ("UTC", 0),
     "gemini_principal": ("America/Los_Angeles", -7),
     "gemini_reserva_1": ("America/Los_Angeles", -7),
     "gemini_reserva_2": ("America/Los_Angeles", -7),
@@ -574,6 +579,7 @@ FUSOS_RENOVACAO_IA = {
 }
 
 NOTAS_LIMITE_IA = {
+    "claude": "limite por minuto de tokens; sem teto fixo de requisições por dia",
     "mistral": "plano gratuito limita por minuto (1 req/s), sem teto diário fixo",
     "cloudflare": "gratuito: 10.000 neurons/dia (o teto é por neuron, não por requisição)",
     "openrouter": "teto dos modelos gratuitos; ajuste em OPENROUTER_LIMITE_DIARIO",
@@ -650,6 +656,7 @@ def status_provedores_ia():
 
     provedores = []
     for identificador, rotulo, configurado in (
+        ("claude", f"Claude ({CLAUDE_MODEL})", bool(CLAUDE_API_KEY)),
         ("gemini_principal", "Gemini principal", bool(GEMINI_API_KEY)),
         ("gemini_reserva_1", "Gemini reserva 1", bool(GEMINI_API_KEY_2)),
         ("gemini_reserva_2", "Gemini reserva 2", bool(GEMINI_API_KEY_3)),
@@ -671,8 +678,8 @@ def status_provedores_ia():
             if registro.get("dia") == _dia_do_provedor(identificador)
             else 0
         )
-        # as três chaves do Gemini usam o mesmo modelo/plano, então o limite aprendido
-        # em uma vale para as outras até que um 429 diga outra coisa
+        # o limite aprendido vem do modelo PRINCIPAL; as chaves de reserva usam o Flash
+        # Lite, cujo balde de cota é próprio — então aqui o número é aproximado
         limite = (
             limite_gemini if identificador.startswith("gemini")
             else LIMITES_DIARIOS_IA.get(identificador)
@@ -682,6 +689,8 @@ def status_provedores_ia():
             "id": identificador,
             "rotulo": rotulo,
             "configurado": configurado,
+            # fora da lista autorizada o provedor está configurado, mas inerte
+            "ativo": _ia_autorizada(identificador),
             "chamadas": chamadas,
             "limite": limite,
             "restantes": max(limite - chamadas, 0) if limite else None,
@@ -785,6 +794,10 @@ class FonteIndisponivel(Exception):
 
 _cache_financeiro = {}
 _fontes_bloqueadas = {}
+# teto do cache em memória (ver _podar_cache) e trava para a poda não competir com
+# a escrita de outro thread do Flask
+MAX_ENTRADAS_CACHE = 400
+_trava_cache = threading.Lock()
 
 
 def _cache_ler(chave):
@@ -793,14 +806,40 @@ def _cache_ler(chave):
         return None
     valor, expira_em = item
     if expira_em < time.time():
-        _cache_financeiro.pop(chave, None)
+        with _trava_cache:
+            _cache_financeiro.pop(chave, None)
         return None
     return valor
 
 
 def _cache_guardar(chave, valor, ttl=CACHE_TTL_COTACOES):
-    _cache_financeiro[chave] = (valor, time.time() + ttl)
+    with _trava_cache:
+        _cache_financeiro[chave] = (valor, time.time() + ttl)
+        # O dicionário antes só crescia: uma entrada saía apenas quando a MESMA chave
+        # era relida depois do TTL. Termo de busca livre (/api/noticias?q=...) e
+        # combinação fonte+ativo que ninguém repetia ficavam para sempre — vazamento
+        # lento em processo de vida longa e um jeito barato de inflar a memória à
+        # distância. Agora, ao passar do teto, o vencido sai primeiro e depois saem as
+        # entradas que vencem mais cedo (as menos úteis).
+        if len(_cache_financeiro) > MAX_ENTRADAS_CACHE:
+            _podar_cache()
     return valor
+
+
+def _podar_cache():
+    """
+    Descarta o vencido e, se ainda faltar espaço, o que vence mais cedo. Só é
+    chamada de dentro de _cache_guardar, com a trava já tomada.
+    """
+    agora = time.time()
+    for chave in [c for c, (_, expira) in _cache_financeiro.items() if expira < agora]:
+        _cache_financeiro.pop(chave, None)
+
+    excedente = len(_cache_financeiro) - MAX_ENTRADAS_CACHE
+    if excedente > 0:
+        mais_proximas_de_vencer = sorted(_cache_financeiro, key=lambda c: _cache_financeiro[c][1])
+        for chave in mais_proximas_de_vencer[:excedente]:
+            _cache_financeiro.pop(chave, None)
 
 
 def _float(valor):
@@ -1291,6 +1330,38 @@ FONTES_FINANCEIRAS = (
 FONTES_SEQUENCIAIS = tuple(fonte for fonte in FONTES_FINANCEIRAS if fonte[0] == "yfinance")
 FONTES_PARALELAS = tuple(fonte for fonte in FONTES_FINANCEIRAS if fonte[0] != "yfinance")
 
+# Como o usuário pode pedir uma fonte na própria pergunta. O apelido aponta para o nome
+# canônico — o mesmo rótulo que aparece no bloco 'Dados de mercado' — porque é por ele
+# que a rotação de fontes e o prompt do sistema se entendem.
+APELIDOS_FONTES = (
+    ("finnhub", "Finnhub"),
+    ("twelve data", "Twelve Data"),
+    ("twelvedata", "Twelve Data"),
+    ("twelve", "Twelve Data"),
+    ("hg brasil", "HG Brasil"),
+    ("hgbrasil", "HG Brasil"),
+    ("hg finance", "HG Brasil"),
+    ("hg", "HG Brasil"),
+    ("yfinance", "yfinance"),
+    ("yahoo finance", "yfinance"),
+    ("yahoo", "yfinance"),
+)
+
+
+def fonte_citada(mensagem):
+    """
+    Nome canônico da fonte de mercado pedida explicitamente na mensagem, ou None.
+
+    A busca é por palavra inteira de propósito: sem as fronteiras, o apelido "hg"
+    casaria dentro de um ticker como HGLG11 (FII da B3) e o pedido viraria uma
+    consulta ao HG Brasil sem ninguém ter pedido.
+    """
+    texto = _normalizar(mensagem)
+    for apelido, canonico in APELIDOS_FONTES:
+        if re.search(rf"\b{re.escape(apelido)}\b", texto):
+            return canonico
+    return None
+
 
 def _consultar_fonte(nome, funcao, ativo):
     """
@@ -1340,7 +1411,7 @@ def _consultar_fonte(nome, funcao, ativo):
     return _cache_guardar(chave_cache, cotacao)
 
 
-def _coletar_cotacoes(ativo):
+def _coletar_cotacoes(ativo, fonte_unica=None):
     """
     Consulta as fontes de um ativo e devolve só o que respondeu, sempre na ordem de
     FONTES_FINANCEIRAS (o paralelismo não pode mudar a ordem do contexto).
@@ -1348,8 +1419,22 @@ def _coletar_cotacoes(ativo):
     Com UMA_FONTE_POR_ATIVO, a primeira que responder encerra a busca do ativo: é o
     fallback — as demais só entram quando ela falha — e é o que corta a maior parte
     das requisições às APIs gratuitas.
+
+    Com `fonte_unica`, SÓ essa fonte é consultada e não há fallback: o usuário pediu
+    por ela e o número tem de ser dela. Sem dado, o ativo simplesmente não entra no
+    bloco (a IA é instruída a avisar, em vez de trocar de provedor em silêncio).
     """
     resultados = {}
+
+    if fonte_unica:
+        for nome, funcao in FONTES_FINANCEIRAS:
+            if nome != fonte_unica:
+                continue
+            try:
+                cotacao = _consultar_fonte(nome, funcao, ativo)
+            except Exception:
+                cotacao = None
+            return [cotacao] if cotacao else []
 
     for nome, funcao in FONTES_SEQUENCIAIS:
         try:
@@ -1390,9 +1475,13 @@ def _linha_cotacao(cotacao):
 
 def coletar_dados_financeiros(mensagem):
     """
-    Consulta todas as fontes para os ativos citados e devolve:
+    Consulta as fontes dos ativos citados e devolve:
 
       {"bloco": "<contexto para a IA>", "fontes": (nomes...), "ativos": [...]}
+
+    Se a mensagem citar explicitamente uma fonte ("usando o Finnhub", "pelo Twelve"),
+    só ela é consultada — ver fonte_citada(). Sem citação, vale o fluxo normal: a
+    primeira fonte que responder dá o número e as outras ficam de fallback.
 
     Nunca levanta exceção: sem ativos reconhecidos, ou com todas as fontes
     falhando, devolve campos vazios e o prompt segue limpo para a IA.
@@ -1406,11 +1495,12 @@ def coletar_dados_financeiros(mensagem):
     if not ativos:
         return resultado
 
+    fonte_unica = fonte_citada(mensagem)
     dados_por_ativo = []
     fontes_usadas = []
 
     for ativo in ativos:
-        cotacoes = _coletar_cotacoes(ativo)
+        cotacoes = _coletar_cotacoes(ativo, fonte_unica)
         for cotacao in cotacoes:
             if cotacao["fonte"] not in fontes_usadas:
                 fontes_usadas.append(cotacao["fonte"])
@@ -1419,13 +1509,28 @@ def coletar_dados_financeiros(mensagem):
 
     if not dados_por_ativo:
         # todas as fontes falharam: a IA responde com conhecimento geral
+        if fonte_unica:
+            # fonte pedida pelo usuário sem dado: o bloco existe só para a IA avisar
+            # isso, em vez de responder com o número de outro provedor
+            return {
+                "bloco": (
+                    f"Dados de mercado: foi solicitada a fonte {fonte_unica} nesta "
+                    "pergunta, mas ela não retornou cotação para os ativos citados. "
+                    "Informe isso ao usuário e não substitua por números de outra fonte."
+                ),
+                "fontes": (),
+                "ativos": ativos,
+            }
         return {"bloco": "", "fontes": (), "ativos": ativos}
 
     # O bloco montado vai para o cache pelo conjunto de ativos: sem isso o timestamp
     # de minuto mudava o texto a cada 60s e invalidava o cache de resposta da IA — que
     # é justamente o passo caro da mensagem. Os números já vêm do cache de cotações.
+    # a fonte pedida entra na chave: sem isso, um bloco só com números do Finnhub
+    # (ou só com os do yfinance) seria reaproveitado de uma pergunta anterior
     chave_bloco = (
         "bloco",
+        fonte_unica,
         tuple((ativo["simbolo"], ativo["tipo"]) for ativo, _ in dados_por_ativo),
     )
     em_cache = _cache_ler(chave_bloco)
@@ -1460,14 +1565,251 @@ def coletar_dados_financeiros(mensagem):
 
 
 # ===========================================================================
-# 2) MOTOR DE IAs COM ROTAÇÃO SEQUENCIAL (nunca em paralelo)
+# NOTÍCIAS DO MERCADO (GNews + Marketaux, agregadas no SERVIDOR)
 #
-# Ordem: Gemini principal -> reservas -> Mistral -> Cloudflare Workers AI -> OpenRouter
-# (testando seus modelos na ordem definida em MODELOS_OPENROUTER_FALLBACK).
-# O provedor seguinte só é acionado quando o anterior não conseguiu responder.
+# As duas APIs são consultadas aqui, com as chaves de back-end/.env: nenhuma chave
+# de notícia vai para o navegador (que a veria no DevTools) nem para o repositório.
+# O frontend pede GET /api/noticias?q=...&page=... e recebe a lista já unificada, no
+# mesmo formato que ele desenhava (title/description/url/publishedAt/source) mais o
+# campo 'provedor', ordenada da mais recente para a mais antiga e sem repetição — a
+# mesma matéria costuma sair nas duas fontes.
+#
+# Como nas fontes de mercado, cada API é isolada: cota estourada (401/403/429),
+# timeout ou JSON inesperado apenas tiram aquela fonte do resultado, e a outra segue
+# respondendo. Nenhuma exceção chega ao navegador.
 # ===========================================================================
 
+GNEWS_URL = "https://gnews.io/api/v4/search"
+MARKETAUX_URL = "https://api.marketaux.com/v1/news/all"
+TIMEOUT_NOTICIAS = 8
+# Teto por requisição de cada fonte: a GNews entrega no máximo 10 no plano gratuito
+# e a Marketaux limita bem abaixo disso — os dois conjuntos são somados e ordenados.
+MAX_NOTICIAS_POR_FONTE = 10
+CACHE_TTL_NOTICIAS = 10 * 60   # 10 min: o feed não muda de minuto em minuto
+
+
+def _noticias_json(url, params):
+    """
+    GET isolado das APIs de notícias: devolve None quando a fonte falha, em vez de
+    levantar. Os parâmetros nunca aparecem em mensagem de erro, resposta ou log,
+    porque a chave viaja na query string.
+    """
+    try:
+        _medidor_contar("fontes")  # requisição externa desta consulta
+        return _pedir_json(url, params=params, timeout=TIMEOUT_NOTICIAS)
+    except Exception:
+        return None
+
+
+def _noticia_normalizada(titulo, descricao, url, publicado_em, fonte, provedor):
+    """Card no formato que o frontend já sabia desenhar (o mesmo da GNews)."""
+    return {
+        "title": str(titulo or "").strip(),
+        "description": str(descricao or "").strip(),
+        "url": str(url or "").strip(),
+        "publishedAt": str(publicado_em or "").strip(),
+        "source": {"name": str(fonte or provedor).strip()},
+        "provedor": provedor,   # selo da fonte no card: GNews ou Marketaux
+    }
+
+
+def _noticias_gnews(termo, pagina, maximo):
+    """(notícias, total, erro) da GNews; erro None quando a fonte respondeu."""
+    if not GNEWS_API_KEY:
+        return [], 0, "chave não configurada"
+
+    dados = _noticias_json(GNEWS_URL, {
+        "q": termo,
+        "lang": "pt",
+        "max": maximo,
+        "page": pagina,
+        "apikey": GNEWS_API_KEY,
+    })
+    if not isinstance(dados, dict):
+        return [], 0, "não respondeu"
+
+    artigos = dados.get("articles")
+    if not isinstance(artigos, list):
+        return [], 0, str(dados.get("errors") or "resposta em formato inesperado")
+
+    noticias = []
+    for artigo in artigos:
+        if not isinstance(artigo, dict):
+            continue
+        origem = artigo.get("source")
+        noticias.append(_noticia_normalizada(
+            artigo.get("title"),
+            artigo.get("description"),
+            artigo.get("url"),
+            artigo.get("publishedAt"),
+            origem.get("name") if isinstance(origem, dict) else origem,
+            "GNews",
+        ))
+    return noticias, int(dados.get("totalArticles") or 0), None
+
+
+def _noticias_marketaux(termo, pagina, maximo):
+    """(notícias, total, erro) da Marketaux; erro None quando a fonte respondeu."""
+    if not MARKETAUX_API_KEY:
+        return [], 0, "chave não configurada"
+
+    dados = _noticias_json(MARKETAUX_URL, {
+        "search": termo,
+        "language": "pt",
+        "limit": maximo,
+        "page": pagina,
+        "api_token": MARKETAUX_API_KEY,
+    })
+    if not isinstance(dados, dict):
+        return [], 0, "não respondeu"
+
+    artigos = dados.get("data")
+    if not isinstance(artigos, list):
+        erro = dados.get("error")
+        return [], 0, str(
+            (erro.get("message") if isinstance(erro, dict) else erro)
+            or "resposta em formato inesperado"
+        )[:160]
+
+    noticias = []
+    for artigo in artigos:
+        if not isinstance(artigo, dict):
+            continue
+        noticias.append(_noticia_normalizada(
+            artigo.get("title"),
+            artigo.get("description") or artigo.get("snippet"),
+            artigo.get("url"),
+            artigo.get("published_at"),
+            artigo.get("source"),
+            "Marketaux",
+        ))
+
+    meta = dados.get("meta") if isinstance(dados.get("meta"), dict) else {}
+    return noticias, int(meta.get("found") or 0), None
+
+
+def _referencia_da_noticia(noticia):
+    """Chave de deduplicação: a URL sem protocolo/barra final (ou o próprio título)."""
+    referencia = str(noticia.get("url") or noticia.get("title") or "").strip()
+    return re.sub(r"^https?://", "", referencia, flags=re.IGNORECASE).rstrip("/").lower()
+
+
+def buscar_noticias(termo="economia", pagina=1, maximo=MAX_NOTICIAS_POR_FONTE):
+    """
+    Junta GNews e Marketaux numa lista única: mais recentes primeiro, sem matéria
+    repetida e com o provedor marcado em cada card. Uma fonte fora do ar não impede
+    a resposta da outra; o resultado fica em cache por 10 minutos para não gastar
+    cota a cada pesquisa repetida.
+    """
+    termo = str(termo or "").strip()[:120] or "economia"
+    try:
+        pagina = max(int(pagina), 1)
+    except (TypeError, ValueError):
+        pagina = 1
+    try:
+        maximo = min(max(int(maximo), 1), MAX_NOTICIAS_POR_FONTE)
+    except (TypeError, ValueError):
+        maximo = MAX_NOTICIAS_POR_FONTE
+
+    chave_cache = ("noticias", _normalizar(termo), pagina, maximo)
+    em_cache = _cache_ler(chave_cache)
+    if em_cache is not None:
+        return em_cache
+
+    # sequencial, nunca em paralelo: a mesma regra das fontes de mercado
+    noticias = []
+    vistas = set()
+    fontes = []
+    falhas = []
+    maior_total = 0
+
+    for nome, buscar in (("GNews", _noticias_gnews), ("Marketaux", _noticias_marketaux)):
+        lista, total, erro = buscar(termo, pagina, maximo)
+        if erro:
+            falhas.append({"fonte": nome, "motivo": erro})
+            continue
+        fontes.append(nome)
+        maior_total = max(maior_total, total)
+        for noticia in lista:
+            referencia = _referencia_da_noticia(noticia)
+            if not noticia["title"] or not noticia["url"] or referencia in vistas:
+                continue
+            vistas.add(referencia)
+            noticias.append(noticia)
+
+    # ISO 8601 ordena corretamente como texto; sem data a notícia vai para o fim
+    noticias.sort(key=lambda item: item["publishedAt"], reverse=True)
+
+    resultado = {
+        "ok": bool(fontes),   # False apenas quando NENHUMA fonte respondeu
+        "noticias": noticias,
+        "total": maior_total,
+        "pagina": pagina,
+        "por_pagina": maximo,
+        "fontes": fontes,
+        "falhas": falhas,
+    }
+    if not fontes:
+        # falha das duas não entra em cache: a próxima pesquisa tenta de novo
+        return resultado
+    return _cache_guardar(chave_cache, resultado, ttl=CACHE_TTL_NOTICIAS)
+
+
+# ===========================================================================
+# 2) MOTOR DE IAs (rotação sequencial, nunca em paralelo)
+#
+# A rotação continua existindo, mas hoje ela tem um único item: o Claude. Ordem
+# histórica dos provedores (todos preservados no código e bloqueados na entrada):
+# Gemini principal -> reservas -> Mistral -> Cloudflare Workers AI -> OpenRouter.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# PROVEDORES DE IA AUTORIZADOS
+#
+# Só quem está listado aqui consegue fazer requisição: esta tupla é a trava de
+# entrada de cada função de provedor, e a ordem da rotação sai de _candidatos_ia()
+# (a tupla abaixo repete essa ordem, para a leitura bater com a cadeia real). Com
+# todos os identificadores presentes o fallback funciona por inteiro: Gemini
+# principal -> reservas -> Mistral -> Cloudflare -> OpenRouter -> Claude. Para tirar
+# um provedor do ar sem apagar o código, basta remover o identificador dele daqui:
+# a rotação deixa de acioná-lo e a trava de entrada dele passa a recusar qualquer
+# chamada direta.
+# ---------------------------------------------------------------------------
+
+PROVEDORES_IA_AUTORIZADOS = (
+    "gemini_principal",    # Gemini com a chave principal
+    "gemini_reserva_1",    # Gemini com GEMINI_API_KEY_2
+    "gemini_reserva_2",    # Gemini com GEMINI_API_KEY_3
+    "mistral",             # Mistral
+    "cloudflare",          # Cloudflare Workers AI
+    "openrouter",          # OpenRouter (percorre MODELOS_OPENROUTER_FALLBACK)
+    "claude",              # Anthropic — último da cadeia (último recurso)
+)
+
+
+def _ia_autorizada(identificador):
+    """True só para o provedor explicitamente autorizado a fazer requisição."""
+    return identificador in PROVEDORES_IA_AUTORIZADOS
+
+
+# --- Claude (Anthropic): provedor ativo -------------------------------------
+# O endpoint e a versão da API são fixos (a versão é exigida por contrato pelo
+# serviço). O modelo é trocável por CLAUDE_MODEL no .env, sem mexer no código.
+URL_CLAUDE = "https://api.anthropic.com/v1/messages"
+CLAUDE_VERSION = "2023-06-01"
+CLAUDE_MODEL = (os.getenv("CLAUDE_MODEL") or "").strip() or "claude-sonnet-5"
+CLAUDE_MAX_TOKENS = 4096
+TIMEOUT_CLAUDE = 15
+
 MODEL_NAME = "gemini-3.5-flash"
+# Modelo das duas chaves de RESERVA do Gemini: a versão Flash Lite. O mapeamento
+# das chaves não muda — GEMINI_API_KEY_2 e GEMINI_API_KEY_3 continuam sendo as
+# reservas 1 e 2 —, só o modelo que elas chamam. A cota gratuita do Google é por
+# modelo, então a reserva em outro modelo ainda tem balde próprio quando o
+# principal esgotou o dia. Trocável sem mexer no código: GEMINI_MODEL_RESERVA.
+MODEL_NAME_RESERVA_GEMINI = (
+    os.getenv("GEMINI_MODEL_RESERVA") or ""
+).strip() or "gemini-2.5-flash-lite"
 API_URL_GEMINI = (
     "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
 )
@@ -1683,14 +2025,15 @@ def _chave_cache_ia(prompt_usuario, instrucao_sistema):
     return ("resposta_ia", resumo)
 
 
-def _provedores_ia():
+def _candidatos_ia():
     """
-    Ordem exata da rotação: 3 chaves do Gemini, a Mistral e, por último, o
-    OpenRouter. Cada chamada recebe o prazo da rotação para não estourar o
-    orçamento total.
+    Provedores que a rotação sabe acionar, na ordem de tentativa, com o identificador
+    que a trava de entrada usa. Os gratuitos vêm primeiro e o Claude fecha a fila;
+    cada chamada recebe o prazo da rotação para não estourar o orçamento total.
     """
     return (
         (
+            "gemini_principal",
             "Gemini principal",
             lambda prompt, instrucao, prazo: _chamar_gemini_com_chave(
                 prompt, instrucao, GEMINI_API_KEY, "gemini_principal",
@@ -1698,29 +2041,144 @@ def _provedores_ia():
             ),
         ),
         (
+            "gemini_reserva_1",
             "Gemini reserva 1",
             lambda prompt, instrucao, prazo: _chamar_gemini_com_chave(
-                prompt, instrucao, GEMINI_API_KEY_2, "gemini_reserva_1", prazo=prazo
+                prompt, instrucao, GEMINI_API_KEY_2, "gemini_reserva_1", prazo=prazo, modelo=MODEL_NAME_RESERVA_GEMINI
             ),
         ),
         (
+            "gemini_reserva_2",
             "Gemini reserva 2",
             lambda prompt, instrucao, prazo: _chamar_gemini_com_chave(
-                prompt, instrucao, GEMINI_API_KEY_3, "gemini_reserva_2", prazo=prazo
+                prompt, instrucao, GEMINI_API_KEY_3, "gemini_reserva_2", prazo=prazo, modelo=MODEL_NAME_RESERVA_GEMINI
             ),
         ),
-        ("Mistral", _chamar_mistral),
-        ("Cloudflare", _chamar_cloudflare),
-        ("OpenRouter", _chamar_openrouter),
+        ("mistral", "Mistral", _chamar_mistral),
+        ("cloudflare", "Cloudflare", _chamar_cloudflare),
+        ("openrouter", "OpenRouter", _chamar_openrouter),
+        # último da cadeia: só é acionado se todos os gratuitos não responderem
+        ("claude", "Claude", _chamar_claude),
     )
 
 
-def _chamar_gemini_com_chave(prompt_usuario, instrucao_sistema, chave, identificador, contar_cota=False, prazo=None):
+def _provedores_ia():
+    """
+    Rotação efetiva: os candidatos na ordem de _candidatos_ia(), menos os que
+    estiverem fora de PROVEDORES_IA_AUTORIZADOS. Com a tupla completa, a cadeia
+    inteira de fallback vale: Gemini principal -> reservas -> Mistral -> Cloudflare
+    -> OpenRouter -> Claude, sempre um provedor por vez (nunca em paralelo).
+    """
+    return tuple(
+        (rotulo, chamada)
+        for identificador, rotulo, chamada in _candidatos_ia()
+        if _ia_autorizada(identificador)
+    )
+
+
+def _espera_do_429_claude(resposta):
+    """
+    Espera do 429 do Claude: a API manda o retry-after em segundos no cabeçalho.
+    Sem cabeçalho legível vale o piso padrão de cota.
+    """
+    try:
+        segundos = int(float(resposta.headers.get("retry-after") or 0))
+    except (AttributeError, TypeError, ValueError):
+        segundos = 0
+    return max(segundos, COOLDOWN_QUOTA_PADRAO)
+
+
+def _chamar_claude(prompt_usuario, instrucao_sistema, prazo=None):
+    """
+    Chamada à API do Claude (Anthropic, POST /v1/messages) — o provedor ativo.
+
+    Uma única requisição por mensagem, no mesmo desenho da Mistral: erro de rede,
+    cota (429), erro de chave/modelo ou resposta ilegível viram
+    ProvedorIndisponivel com cooldown, sem repetir a chamada — repetir aqui
+    duplicaria tokens em cima de uma falha. O corpo é lido em pedaços por
+    _post_em_pedacos, então a requisição morre junto com o orçamento da rotação.
+    """
+    if not _ia_autorizada("claude"):
+        raise ProvedorIndisponivel("Claude desativado por configuração")
+
+    if not CLAUDE_API_KEY:
+        raise ProvedorIndisponivel(
+            "CLAUDE_API_KEY não configurada no .env do back-end"
+        )
+
+    if _quota_bloqueada_ate.get("claude", 0.0) > time.time():
+        raise ProvedorIndisponivel("em espera por cota do Claude", quota=True)
+
+    if not _cabe_no_orcamento(prazo):
+        raise ProvedorIndisponivel("orçamento de tempo da rotação esgotado")
+
+    headers = {
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": CLAUDE_VERSION,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": CLAUDE_MODEL,
+        "max_tokens": CLAUDE_MAX_TOKENS,
+        "temperature": 0.4,
+        "system": instrucao_sistema,
+        "messages": [{"role": "user", "content": prompt_usuario}],
+    }
+
+    try:
+        resposta = _post_em_pedacos(URL_CLAUDE, headers, payload, TIMEOUT_CLAUDE, prazo)
+    except requests.exceptions.RequestException as erro:
+        _quota_bloqueada_ate["claude"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"não respondeu ({type(erro).__name__})") from None
+
+    detalhe = (resposta.text or "").strip()[:200]
+    if resposta.status_code in STATUS_QUE_ATIVAM_ROTACAO or resposta.status_code >= 400:
+        _quota_bloqueada_ate["claude"] = time.time() + (
+            _espera_do_429_claude(resposta) if resposta.status_code == 429
+            else COOLDOWN_PROVEDOR_FALHA
+        )
+        raise ProvedorIndisponivel(
+            f"HTTP {resposta.status_code}: {detalhe}",
+            quota=(resposta.status_code == 429),
+        )
+
+    try:
+        dados = resposta.json()
+    except ValueError:
+        _quota_bloqueada_ate["claude"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"resposta não é JSON: {detalhe}") from None
+
+    # formato de sucesso: {"content": [{"type": "text", "text": "..."}, ...]}
+    conteudo = dados.get("content")
+    texto = ""
+    if isinstance(conteudo, list):
+        texto = "".join(
+            str(bloco.get("text") or "")
+            for bloco in conteudo
+            if isinstance(bloco, dict) and bloco.get("type") == "text"
+        )
+
+    if not texto.strip():
+        erro = dados.get("error")
+        motivo = (erro.get("message") if isinstance(erro, dict) else erro) or detalhe
+        _quota_bloqueada_ate["claude"] = time.time() + COOLDOWN_PROVEDOR_FALHA
+        raise ProvedorIndisponivel(f"resposta vazia ou com erro: {str(motivo)[:160]}")
+
+    registrar_chamada_ia("claude")  # contador do painel de diagnóstico
+    return texto
+
+
+def _chamar_gemini_com_chave(prompt_usuario, instrucao_sistema, chave, identificador, contar_cota=False, prazo=None, modelo=None):
     """
     Uma chamada ao Gemini com uma chave específica. Erros que indicam "esta
     chave não vai responder agora" viram ProvedorIndisponivel (a rotação
     assume); nenhuma exceção bruta sobe daqui.
     """
+    if not _ia_autorizada(identificador):
+        raise ProvedorIndisponivel(
+            f"{identificador} desativado: só o Claude pode fazer requisição"
+        )
+
     if not chave:
         raise ProvedorIndisponivel("chave não configurada", quota=False)
 
@@ -1737,10 +2195,10 @@ def _chamar_gemini_com_chave(prompt_usuario, instrucao_sistema, chave, identific
     payload = {
         "contents": [{"parts": [{"text": prompt_usuario}]}],
         "systemInstruction": {"parts": [{"text": instrucao_sistema}]},
-        "generationConfig": {"temperature": 0.4},
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 4096},
     }
     headers = {"Content-Type": "application/json", "x-goog-api-key": chave}
-    url = API_URL_GEMINI.format(modelo=MODEL_NAME)
+    url = API_URL_GEMINI.format(modelo=modelo or MODEL_NAME)
 
     espera = ESPERA_INICIAL_SEGUNDOS
 
@@ -1830,6 +2288,11 @@ def _chamar_openrouter(prompt_usuario, instrucao_sistema, prazo=None):
     """
     global _ultimo_modelo_openrouter
 
+    if not _ia_autorizada("openrouter"):
+        raise ProvedorIndisponivel(
+            "OpenRouter desativado: só o Claude pode fazer requisição"
+        )
+
     if not OPENROUTER_API_KEY:
         raise ProvedorIndisponivel("chave não configurada")
 
@@ -1858,6 +2321,7 @@ def _chamar_openrouter(prompt_usuario, instrucao_sistema, prazo=None):
                 {"role": "user", "content": prompt_usuario},
             ],
             "temperature": 0.4,
+            "max_tokens": 4096,
         }
         try:
             resposta = _post_em_pedacos(
@@ -1920,6 +2384,11 @@ def _chamar_mistral(prompt_usuario, instrucao_sistema, prazo=None):
     cooldown e a rotação segue para o próximo provedor — o mesmo desenho do
     OpenRouter, que evita gastar cota insistindo em quem acabou de falhar.
     """
+    if not _ia_autorizada("mistral"):
+        raise ProvedorIndisponivel(
+            "Mistral desativada: só o Claude pode fazer requisição"
+        )
+
     if not MISTRAL_API_KEY:
         raise ProvedorIndisponivel("chave não configurada")
 
@@ -1940,6 +2409,7 @@ def _chamar_mistral(prompt_usuario, instrucao_sistema, prazo=None):
             {"role": "user", "content": prompt_usuario},
         ],
         "temperature": 0.4,
+        "max_tokens": 4096,
     }
     try:
         resposta = _post_em_pedacos(URL_MISTRAL, headers, payload, TIMEOUT_MISTRAL, prazo)
@@ -1980,6 +2450,11 @@ def _chamar_cloudflare(prompt_usuario, instrucao_sistema, prazo=None):
     em cooldown e a rotação segue para o próximo provedor, em vez de queimar a cota
     gratuita insistindo em quem acabou de falhar.
     """
+    if not _ia_autorizada("cloudflare"):
+        raise ProvedorIndisponivel(
+            "Cloudflare desativado: só o Claude pode fazer requisição"
+        )
+
     if not CLOUDFLARE_API_TOKEN or not CLOUDFLARE_ACCOUNT_ID:
         raise ProvedorIndisponivel("token/account id do Cloudflare não configurados")
 
@@ -1999,6 +2474,7 @@ def _chamar_cloudflare(prompt_usuario, instrucao_sistema, prazo=None):
             {"role": "user", "content": prompt_usuario},
         ],
         "temperature": 0.4,
+        "max_tokens": 4096,
     }
     url = URL_CLOUDFLARE.format(conta=CLOUDFLARE_ACCOUNT_ID, modelo=CLOUDFLARE_MODEL)
 
@@ -2048,13 +2524,9 @@ def _chamar_cloudflare(prompt_usuario, instrucao_sistema, prazo=None):
 
 
 def _mensagem_todos_esgotados(falhas):
-    detalhes = "; ".join(f"{rotulo}: {motivo}" for rotulo, motivo, _ in falhas[:4])
-    return (
-        "Não consegui responder agora: nenhuma das IAs configuradas concluiu a "
-        f"chamada ({detalhes}). "
-        f"Se for limite de uso, a próxima renovação é em {renovacao_em_texto()} "
-        "(horário de Brasília)."
-    )
+    # o detalhe por provedor (quem falhou e por quê) NÃO vai para a resposta: o
+    # usuário recebe só um aviso curto e o frontend já oferece "Tentar novamente"
+    return "Não consegui responder agora. Tente novamente em alguns minutos."
 
 
 def chamar_ia(prompt_usuario, instrucao_sistema):
@@ -2096,6 +2568,9 @@ def chamar_ia(prompt_usuario, instrucao_sistema):
                 _ultimo_modelo_openrouter
                 if rotulo == "OpenRouter" and _ultimo_modelo_openrouter
                 else MISTRAL_MODEL if rotulo == "Mistral"
+                else CLAUDE_MODEL if rotulo == "Claude"
+                else CLOUDFLARE_MODEL if rotulo == "Cloudflare"
+                else MODEL_NAME_RESERVA_GEMINI if rotulo.startswith("Gemini reserva")
                 else MODEL_NAME
             )
             _ultimo_provedor = f"{rotulo} · {modelo_do_rotulo}"
@@ -2304,7 +2779,7 @@ def processar_mensagem(mensagem, uid=None, memoria=None):
             return {
                 "tipo": "imagem",
                 "arquivo": nome_arquivo,
-                "texto": resposta_com_aviso_de_cota(
+                "texto": (
                     f'Gráfico gerado: "{titulo}".\n\n'
                     f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}.\n"
                     f"{montar_linha_de_fontes(memoria, contexto_economatica, fontes_mercado)}\n\n"
@@ -2324,7 +2799,7 @@ def processar_mensagem(mensagem, uid=None, memoria=None):
 
     try:
         resposta = perguntar_ao_ia(mensagem, memoria, contexto_economatica, bloco_financeiro)
-        return {"tipo": "texto", "resposta": resposta_com_aviso_de_cota(resposta)}
+        return {"tipo": "texto", "resposta": resposta}
     except CotaDoGemini as erro:
         # pode_reenviar: o frontend mostra o botão "Tentar novamente"
         return {"tipo": "texto", "resposta": str(erro), "pode_reenviar": True}
@@ -2351,17 +2826,38 @@ def custo_da_mensagem():
 def _resumo_configuracao():
     fontes = ["yfinance" if yf is not None else "yfinance (não instalado)"]
     fontes += ["HG Brasil", "Finnhub", "Twelve Data"]
-    ia = ["Gemini principal" if GEMINI_API_KEY else "Gemini principal (sem chave)"]
+    # notícias: as chaves ficam no servidor, o navegador nunca as recebe
+    fontes += [
+        "GNews (notícias)" if GNEWS_API_KEY else "GNews (notícias, sem chave)",
+        "Marketaux (notícias)" if MARKETAUX_API_KEY else "Marketaux (notícias, sem chave)",
+    ]
+    # o banner reflete o que a rotação realmente pode acionar, na ordem da cadeia
+    ia = []
+    if GEMINI_API_KEY:
+        ia.append("Gemini principal")
     if GEMINI_API_KEY_2:
-        ia.append("Gemini reserva 1")
+        ia.append(f"Gemini reserva 1 ({MODEL_NAME_RESERVA_GEMINI})")
     if GEMINI_API_KEY_3:
-        ia.append("Gemini reserva 2")
+        ia.append(f"Gemini reserva 2 ({MODEL_NAME_RESERVA_GEMINI})")
     if MISTRAL_API_KEY:
         ia.append(f"Mistral ({MISTRAL_MODEL})")
     if CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID:
         ia.append(f"Cloudflare Workers AI ({CLOUDFLARE_MODEL})")
     if OPENROUTER_API_KEY:
         ia.append(f"OpenRouter ({len(MODELOS_OPENROUTER_FALLBACK)} modelos)")
+    # o Claude fecha a cadeia: só é acionado se todos os anteriores falharem
+    ia.append(
+        f"Claude ({CLAUDE_MODEL})" if CLAUDE_API_KEY
+        else "Claude (sem chave — defina CLAUDE_API_KEY em back-end/.env)"
+    )
+
+    # provedor que uma restrição de PROVEDORES_IA_AUTORIZADOS deixa fora da cadeia
+    desativadas = [
+        rotulo for identificador, rotulo, _ in _candidatos_ia()
+        if not _ia_autorizada(identificador)
+    ]
+    if desativadas:
+        ia.append("desativados por configuração: " + ", ".join(desativadas))
 
     # quem está fora da rotação neste momento, para não dar a impressão de que o
     # provedor foi removido do código
@@ -2455,6 +2951,7 @@ def criar_app():
             "status": "ok",
             "rotas": [
                 "POST /api/chat",
+                "GET /api/noticias",
                 "GET /api/status-ias",
                 "GET /api/health",
                 "DELETE|POST /api/limpar-memoria",
@@ -2465,15 +2962,46 @@ def criar_app():
     @aplicacao.route("/api/status-ias", methods=["GET"])
     def status_ias():
         """
-        Painel do chat: quanto ainda resta em cada API da rotação. Responde só com
-        estado local (contadores e cooldowns) — não chama nenhum provedor, então
-        consultar isso não consome cota.
+        Diagnóstico interno: quanto já saiu hoje em cada API da rotação. A interface do
+        chat não mostra mais esses números (eles são por instância, não a cota da conta).
+        Responde só com estado local (contadores e cooldowns) — não chama nenhum
+        provedor, então consultar isso não consome cota.
         """
         return jsonify({
             "provedores": status_provedores_ia(),
             "renovacao_gemini": renovacao_em_texto(),
             "renovacao_utc": renovacao_em_texto_utc(),
         })
+
+    @aplicacao.route("/api/noticias", methods=["GET"])
+    def noticias():
+        """
+        Feed de notícias do site: consulta a GNews e a Marketaux NO SERVIDOR e devolve
+        as duas listas já unificadas. As chaves ficam em back-end/.env, então nem o
+        navegador (DevTools/rede) nem o repositório chegam a vê-las.
+        """
+        _medidor_iniciar()
+        try:
+            resultado = buscar_noticias(
+                request.args.get("q", "economia"),
+                request.args.get("page", 1, type=int) or 1,
+                request.args.get("max", MAX_NOTICIAS_POR_FONTE, type=int)
+                or MAX_NOTICIAS_POR_FONTE,
+            )
+        except Exception:
+            # problema de notícia nunca derruba o servidor nem quebra o chat
+            resultado = {
+                "ok": False,
+                "noticias": [],
+                "total": 0,
+                "pagina": 1,
+                "por_pagina": MAX_NOTICIAS_POR_FONTE,
+                "fontes": [],
+                "falhas": [{"fonte": "servidor", "motivo": "erro inesperado"}],
+            }
+
+        resultado["custo"] = custo_da_mensagem()
+        return jsonify(resultado)
 
     @aplicacao.route("/api/health", methods=["GET"])
     def health():

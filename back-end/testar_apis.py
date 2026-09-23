@@ -1,35 +1,37 @@
 """
-Teste rápido e isolado de todas as APIs de IA da rotação.
+Teste isolado do provedor de IA ativo do OnTrack: o Claude (Anthropic).
 
-    python back-end/testar_apis.py
+    python back-end/testar_apis.py             # UMA requisição (consome tokens)
+    python back-end/testar_apis.py --modelos   # lista os modelos (não consome tokens)
 
 O que este script faz:
 
-  * percorre os provedores em sequência — Gemini (principal e reservas), Mistral,
-    Cloudflare Workers AI e OpenRouter — e manda UMA única requisição simples para
-    cada um, uma de cada vez, nunca em paralelo;
-  * faz uma pausa curta entre um provedor e o outro (--pausa, padrão 2s) para não
-    encostar em limite por minuto;
-  * imprime, por provedor, o status HTTP e um trecho da resposta, e termina com um
-    resumo e código de saída 0 (tudo ok) ou 1 (alguma falha).
+  * manda UMA única requisição para POST /v1/messages, com a pergunta mais curta
+    possível (o objetivo é validar credencial e disponibilidade, não a qualidade da
+    resposta), e imprime o status HTTP, o modelo usado e um trecho do texto devolvido;
+  * valida a credencial de ponta a ponta: chave errada (401), chave sem permissão
+    (403), modelo inexistente (404) e cota/limite (429) aparecem com a mensagem que
+    a própria API devolve, e o script termina com código de saída 1.
 
-Por que ele é isolado: NÃO importa back-end/app.py. Fala direto com as APIs usando
+Por que ele é isolado: NÃO importa back-end/app.py. Fala direto com a API usando
 apenas `requests` e o back-end/.env. Assim ele não mexe em contadores locais, não
 cria cooldown, não grava memória e não sobe nenhum servidor.
 
-Atenção: cada teste é uma requisição de verdade e consome cota do provedor. É um
-por API, de propósito — não rode isto em laço.
+Este script testa SOMENTE o Claude: nenhuma outra IA é tocada aqui, então rodá-lo não
+consome a cota de Gemini, Mistral, Cloudflare nem OpenRouter. Esses provedores voltaram
+à rotação em back-end/app.py (PROVEDORES_IA_AUTORIZADOS) e são acionados pelo chat
+normalmente — se quiser testá-los, use o chat ou acrescente um verificador aqui.
+
+Atenção: o teste padrão é uma requisição de verdade e consome tokens da conta. É uma
+por execução, de propósito — não rode isto em laço.
 
 Opções:
-    --pausa SEGUNDOS        espera entre provedores (padrão 2)
-    --somente LISTA         testa só alguns, separados por vírgula
-                            (gemini,mistral,cloudflare,openrouter)
-    --modelo-openrouter M   troca o modelo testado no OpenRouter
-    --sem-cores             desliga as cores (bom para log/CI)
+    --modelos         lista os modelos disponíveis para a chave (não gasta tokens)
+    --modelo MODELO   troca o modelo testado (padrão: CLAUDE_MODEL do .env)
+    --sem-cores       desliga as cores (bom para log/CI)
 
-Os nomes de modelo abaixo espelham back-end/app.py. Se você trocar um modelo lá
-(MODEL_NAME, MISTRAL_MODEL, CLOUDFLARE_MODEL), troque aqui também — ou defina
-MISTRAL_MODEL / CLOUDFLARE_MODEL no .env, que o script respeita.
+O modelo padrão abaixo espelha back-end/app.py. Se você trocar lá (CLAUDE_MODEL),
+troque aqui também — ou defina CLAUDE_MODEL no .env, que os dois respeitam.
 """
 
 import argparse
@@ -60,33 +62,35 @@ except ImportError:  # sem python-dotenv, ainda funciona com variáveis já expo
     pass
 
 # ---------------------------------------------------------------------------
-# PROMPT MÍNIMO E TEMPOS
+# ENDPOINT, PROMPT MÍNIMO E TEMPOS
 # ---------------------------------------------------------------------------
 
-# pergunta mais simples possível: o objetivo é validar credencial e disponibilidade,
-# não a qualidade da resposta (e resposta curta gasta menos cota)
+URL_CLAUDE = "https://api.anthropic.com/v1/messages"
+URL_CLAUDE_MODELOS = "https://api.anthropic.com/v1/models"
+CLAUDE_VERSION = "2023-06-01"
+
+# pergunta mais simples possível: valida a credencial sem gastar tokens à toa
 PERGUNTA = "Responda apenas com a palavra OK."
+MODELO_CLAUDE = (
+    os.getenv("CLAUDE_MODEL") or ""
+).strip() or "claude-sonnet-5"
+MAX_TOKENS = 64          # resposta de teste é uma palavra: não precisa de mais
 TEMPERATURA = 0.1
-TIMEOUT = 20
-PAUSA_PADRAO = 2.0
-
-MODELO_GEMINI = "gemini-3.5-flash"                     # = MODEL_NAME de app.py
-MODELO_MISTRAL = os.getenv("MISTRAL_MODEL", "mistral-small-latest").strip() or "mistral-small-latest"
-MODELO_CLOUDFLARE = (
-    os.getenv("CLOUDFLARE_MODEL") or ""
-).strip() or "@cf/meta/llama-3.1-8b-instruct"
-# só o PRIMEIRO modelo da lista de app.py é testado: um teste = uma requisição
-MODELO_OPENROUTER = "inclusionai/ling-3.0-flash-fin:free"
-
-URL_GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
-URL_MISTRAL = "https://api.mistral.ai/v1/chat/completions"
-URL_CLOUDFLARE = "https://api.cloudflare.com/client/v4/accounts/{conta}/ai/run/{modelo}"
-URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
+TIMEOUT = 30
 
 
 def chave(nome):
     """Lê a variável de ambiente; ausente ou vazia devolve ''."""
     return (os.getenv(nome) or "").strip()
+
+
+def cabecalhos(chave_api):
+    """Cabeçalhos exigidos pela API do Claude: a versão é obrigatória."""
+    return {
+        "x-api-key": chave_api,
+        "anthropic-version": CLAUDE_VERSION,
+        "Content-Type": "application/json",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +120,7 @@ def cinza(texto):
     return _cor(texto, "90")
 
 
-def _limpar(texto, limite=140):
+def _limpar(texto, limite=200):
     """Uma linha só, sem quebras, para não bagunçar a tabela do terminal."""
     texto = " ".join(str(texto or "").split())
     return texto[:limite] + ("..." if len(texto) > limite else "")
@@ -130,8 +134,6 @@ def _detalhe_erro(resposta):
         return _limpar(resposta.text)
 
     if isinstance(dados, dict):
-        if dados.get("errors"):
-            return _limpar(dados["errors"])
         erro = dados.get("error")
         if isinstance(erro, dict):
             return _limpar(erro.get("message") or erro)
@@ -143,214 +145,107 @@ def _detalhe_erro(resposta):
 
 
 # ---------------------------------------------------------------------------
-# UM TESTE POR PROVEDOR (sempre uma única requisição)
+# O TESTE (sempre uma única requisição de geração)
 # ---------------------------------------------------------------------------
 
-def testar_gemini(rotulo, variavel):
-    chave_api = chave(variavel)
+def testar_claude(modelo):
+    chave_api = chave("CLAUDE_API_KEY")
     if not chave_api:
-        return {"rotulo": rotulo, "ok": False, "status": None,
-                "detalhe": f"{variavel} não configurada no .env"}
-
-    url = URL_GEMINI.format(modelo=MODELO_GEMINI)
-    try:
-        resposta = requests.post(
-            url,
-            headers={"Content-Type": "application/json", "x-goog-api-key": chave_api},
-            json={
-                "contents": [{"parts": [{"text": PERGUNTA}]}],
-                "generationConfig": {"temperature": TEMPERATURA, "maxOutputTokens": 512},
-            },
-            timeout=TIMEOUT,
-        )
-    except requests.exceptions.RequestException as erro:
-        return {"rotulo": rotulo, "ok": False, "status": None,
-                "detalhe": f"falha de rede ({type(erro).__name__})"}
-
-    if resposta.status_code != 200:
-        return {"rotulo": rotulo, "ok": False, "status": resposta.status_code,
-                "detalhe": _detalhe_erro(resposta)}
-
-    try:
-        texto = resposta.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except (ValueError, KeyError, IndexError, TypeError):
-        return {"rotulo": rotulo, "ok": False, "status": resposta.status_code,
-                "detalhe": "resposta em formato inesperado"}
-
-    return {"rotulo": rotulo, "ok": bool(str(texto).strip()),
-            "status": resposta.status_code, "detalhe": _limpar(texto)}
-
-
-def testar_mistral():
-    chave_api = chave("MISTRAL_API_KEY")
-    if not chave_api:
-        return {"rotulo": "Mistral", "ok": False, "status": None,
-                "detalhe": "MISTRAL_API_KEY não configurada no .env"}
+        return {"rotulo": f"Claude ({modelo})", "ok": False, "status": None,
+                "detalhe": "CLAUDE_API_KEY não configurada no back-end/.env"}
 
     try:
         resposta = requests.post(
-            URL_MISTRAL,
-            headers={"Authorization": f"Bearer {chave_api}", "Content-Type": "application/json"},
-            json={
-                "model": MODELO_MISTRAL,
-                "messages": [
-                    {"role": "system", "content": "Responda em português."},
-                    {"role": "user", "content": PERGUNTA},
-                ],
-                "temperature": TEMPERATURA,
-                "max_tokens": 512,
-            },
-            timeout=TIMEOUT,
-        )
-    except requests.exceptions.RequestException as erro:
-        return {"rotulo": "Mistral", "ok": False, "status": None,
-                "detalhe": f"falha de rede ({type(erro).__name__})"}
-
-    if resposta.status_code != 200:
-        return {"rotulo": "Mistral", "ok": False, "status": resposta.status_code,
-                "detalhe": _detalhe_erro(resposta)}
-
-    try:
-        texto = resposta.json()["choices"][0]["message"]["content"]
-    except (ValueError, KeyError, IndexError, TypeError):
-        return {"rotulo": "Mistral", "ok": False, "status": resposta.status_code,
-                "detalhe": "resposta em formato inesperado"}
-
-    return {"rotulo": f"Mistral ({MODELO_MISTRAL})", "ok": bool(str(texto).strip()),
-            "status": resposta.status_code, "detalhe": _limpar(texto)}
-
-
-def testar_cloudflare():
-    token = chave("CLOUDFLARE_API_TOKEN")
-    conta = chave("CLOUDFLARE_ACCOUNT_ID")
-    rotulo = f"Cloudflare ({MODELO_CLOUDFLARE})"
-
-    if not token or not conta:
-        return {"rotulo": rotulo, "ok": False, "status": None,
-                "detalhe": "CLOUDFLARE_API_TOKEN e/ou CLOUDFLARE_ACCOUNT_ID não configurados no .env"}
-
-    url = URL_CLOUDFLARE.format(conta=conta, modelo=MODELO_CLOUDFLARE)
-    try:
-        resposta = requests.post(
-            url,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json={
-                "messages": [
-                    {"role": "system", "content": "Responda em português e de forma curta."},
-                    {"role": "user", "content": PERGUNTA},
-                ],
-                "temperature": TEMPERATURA,
-                "max_tokens": 512,
-            },
-            timeout=TIMEOUT,
-        )
-    except requests.exceptions.RequestException as erro:
-        return {"rotulo": rotulo, "ok": False, "status": None,
-                "detalhe": f"falha de rede ({type(erro).__name__})"}
-
-    if resposta.status_code != 200:
-        return {"rotulo": rotulo, "ok": False, "status": resposta.status_code,
-                "detalhe": _detalhe_erro(resposta)}
-
-    try:
-        dados = resposta.json()
-    except ValueError:
-        return {"rotulo": rotulo, "ok": False, "status": resposta.status_code,
-                "detalhe": "resposta não é JSON"}
-
-    texto = ""
-    resultado = dados.get("result")
-    if isinstance(resultado, str):
-        texto = resultado
-    elif isinstance(resultado, dict):
-        texto = resultado.get("response") or ""
-        if not texto and resultado.get("choices"):
-            texto = ((resultado["choices"][0] or {}).get("message") or {}).get("content") or ""
-
-    if not str(texto).strip():
-        return {"rotulo": rotulo, "ok": False, "status": resposta.status_code,
-                "detalhe": _detalhe_erro(resposta) or "resposta vazia"}
-
-    return {"rotulo": rotulo, "ok": True, "status": resposta.status_code,
-            "detalhe": _limpar(texto)}
-
-
-def testar_openrouter(modelo):
-    chave_api = chave("OPENROUTER_API_KEY")
-    if not chave_api:
-        return {"rotulo": "OpenRouter", "ok": False, "status": None,
-                "detalhe": "OPENROUTER_API_KEY não configurada no .env"}
-
-    try:
-        resposta = requests.post(
-            URL_OPENROUTER,
-            headers={
-                "Authorization": f"Bearer {chave_api}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": os.getenv("SITE_URL", "https://on-track-sage.vercel.app"),
-                "X-Title": "OnTrack (teste de APIs)",
-            },
+            URL_CLAUDE,
+            headers=cabecalhos(chave_api),
             json={
                 "model": modelo,
-                "messages": [
-                    {"role": "system", "content": "Responda em português."},
-                    {"role": "user", "content": PERGUNTA},
-                ],
+                "max_tokens": MAX_TOKENS,
                 "temperature": TEMPERATURA,
-                "max_tokens": 512,
+                "messages": [{"role": "user", "content": PERGUNTA}],
             },
             timeout=TIMEOUT,
         )
     except requests.exceptions.RequestException as erro:
-        return {"rotulo": "OpenRouter", "ok": False, "status": None,
+        return {"rotulo": f"Claude ({modelo})", "ok": False, "status": None,
                 "detalhe": f"falha de rede ({type(erro).__name__})"}
 
     if resposta.status_code != 200:
-        return {"rotulo": f"OpenRouter ({modelo})", "ok": False,
+        return {"rotulo": f"Claude ({modelo})", "ok": False,
                 "status": resposta.status_code, "detalhe": _detalhe_erro(resposta)}
 
     try:
-        texto = resposta.json()["choices"][0]["message"]["content"]
-    except (ValueError, KeyError, IndexError, TypeError):
-        return {"rotulo": f"OpenRouter ({modelo})", "ok": False,
-                "status": resposta.status_code, "detalhe": "resposta em formato inesperado"}
+        conteudo = resposta.json().get("content")
+    except ValueError:
+        return {"rotulo": f"Claude ({modelo})", "ok": False,
+                "status": resposta.status_code, "detalhe": "resposta não é JSON"}
 
-    return {"rotulo": f"OpenRouter ({modelo})", "ok": bool(str(texto).strip()),
-            "status": resposta.status_code, "detalhe": _limpar(texto)}
+    # formato de sucesso: {"content": [{"type": "text", "text": "..."}, ...]}
+    texto = ""
+    if isinstance(conteudo, list):
+        texto = "".join(
+            str(bloco.get("text") or "")
+            for bloco in conteudo
+            if isinstance(bloco, dict) and bloco.get("type") == "text"
+        )
+
+    return {"rotulo": f"Claude ({modelo})", "ok": bool(texto.strip()),
+            "status": resposta.status_code, "detalhe": _limpar(texto) or "resposta vazia"}
+
+
+def listar_modelos():
+    """
+    GET /v1/models: confirma a chave e mostra quais modelos a conta enxerga. É
+    leitura de metadados — não gera texto e não consome tokens.
+    """
+    chave_api = chave("CLAUDE_API_KEY")
+    if not chave_api:
+        print(vermelho("CLAUDE_API_KEY não configurada no back-end/.env"))
+        return 1
+
+    try:
+        resposta = requests.get(URL_CLAUDE_MODELOS, headers=cabecalhos(chave_api),
+                                params={"limit": 50}, timeout=TIMEOUT)
+    except requests.exceptions.RequestException as erro:
+        print(vermelho(f"falha de rede ({type(erro).__name__})"))
+        return 1
+
+    if resposta.status_code != 200:
+        print(vermelho(f"HTTP {resposta.status_code} — {_detalhe_erro(resposta)}"))
+        return 1
+
+    try:
+        modelos = resposta.json().get("data") or []
+    except ValueError:
+        print(vermelho("resposta não é JSON"))
+        return 1
+
+    if not modelos:
+        print(amarelo("a API respondeu 200, mas sem nenhum modelo listado"))
+        return 1
+
+    print(verde(f"chave válida — {len(modelos)} modelo(s) disponível(is):"))
+    for modelo in modelos:
+        identificador = modelo.get("id", "?")
+        rotulo = modelo.get("display_name") or ""
+        print(f"  - {identificador}" + (f"  {cinza(rotulo)}" if rotulo else ""))
+    print()
+    print(cinza("Para testar outro modelo: python back-end/testar_apis.py --modelo <id>"))
+    return 0
 
 
 # ---------------------------------------------------------------------------
 # EXECUÇÃO
 # ---------------------------------------------------------------------------
 
-def montar_testes(somente, modelo_openrouter):
-    """
-    Ordem igual à da rotação em app.py: Gemini principal, reservas, Mistral,
-    Cloudflare e OpenRouter. Cada item é (nome, função) — chamadas uma por vez.
-    """
-    testes = [
-        ("gemini", lambda: testar_gemini("Gemini principal", "GEMINI_API_KEY")),
-        ("gemini", lambda: testar_gemini("Gemini reserva 1", "GEMINI_API_KEY_2")),
-        ("gemini", lambda: testar_gemini("Gemini reserva 2", "GEMINI_API_KEY_3")),
-        ("mistral", testar_mistral),
-        ("cloudflare", testar_cloudflare),
-        ("openrouter", lambda: testar_openrouter(modelo_openrouter)),
-    ]
-    if somente:
-        testes = [item for item in testes if item[0] in somente]
-    return testes
-
-
 def main():
     parser = argparse.ArgumentParser(
-        description="Testa, uma requisição por API, todos os provedores de IA da rotação."
+        description="Testa o provedor de IA ativo (Claude/Anthropic) com uma requisição."
     )
-    parser.add_argument("--pausa", type=float, default=PAUSA_PADRAO,
-                        help=f"segundos entre provedores (padrão {PAUSA_PADRAO})")
-    parser.add_argument("--somente", default="",
-                        help="lista separada por vírgula: gemini,mistral,cloudflare,openrouter")
-    parser.add_argument("--modelo-openrouter", default=MODELO_OPENROUTER,
-                        help=f"modelo do OpenRouter (padrão {MODELO_OPENROUTER})")
+    parser.add_argument("--modelos", action="store_true",
+                        help="lista os modelos da chave (não consome tokens)")
+    parser.add_argument("--modelo", default=MODELO_CLAUDE,
+                        help=f"modelo do Claude (padrão {MODELO_CLAUDE})")
     parser.add_argument("--sem-cores", action="store_true", help="desliga as cores")
     argumentos = parser.parse_args()
 
@@ -358,52 +253,39 @@ def main():
     if argumentos.sem_cores:
         CORES = False
 
-    so_estes = {nome.strip().lower() for nome in argumentos.somente.split(",") if nome.strip()}
-    testes = montar_testes(so_estes, argumentos.modelo_openrouter)
+    if argumentos.modelos:
+        return listar_modelos()
 
-    print(f"Testando {len(testes)} chamada(s) de IA, uma por vez, com a pergunta: {PERGUNTA!r}")
-    print(cinza("Cada teste consome 1 requisição da cota real do provedor."))
+    print(f"Testando 1 chamada de IA com a pergunta: {PERGUNTA!r}")
+    print(cinza("Este teste consome 1 requisição (poucos tokens) da conta do Claude."))
+    print(cinza("Gemini, Mistral, Cloudflare e OpenRouter não são tocados aqui."))
     print()
 
-    resultados = []
-    for indice, (nome, funcao) in enumerate(testes, start=1):
-        if indice > 1 and argumentos.pausa > 0:
-            time.sleep(argumentos.pausa)  # respeita limite por minuto dos planos gratuitos
+    inicio = time.time()
+    try:
+        resultado = testar_claude(argumentos.modelo)
+    except Exception as erro:  # nenhuma surpresa derruba o teste
+        resultado = {"rotulo": f"Claude ({argumentos.modelo})", "ok": False,
+                     "status": None, "detalhe": f"{type(erro).__name__}: {erro}"}
 
-        print(f"[{indice}/{len(testes)}] {nome} ... ", end="", flush=True)
-        inicio = time.time()
-        try:
-            resultado = funcao()
-        except Exception as erro:  # nenhuma surpresa derruba o teste
-            resultado = {"rotulo": nome, "ok": False, "status": None,
-                         "detalhe": f"{type(erro).__name__}: {erro}"}
-
-        resultado["segundos"] = round(time.time() - inicio, 1)
-        resultados.append(resultado)
-
-        if resultado["ok"]:
-            print(verde(f"OK ({resultado['segundos']}s)"))
-        else:
-            status = f"HTTP {resultado['status']}" if resultado["status"] else "sem resposta"
-            print(vermelho(f"FALHOU — {status}"))
-        print(f"    {resultado['rotulo']}: {resultado['detalhe']}")
-
-    # resumo final
-    aprovados = [r for r in resultados if r["ok"]]
-    reprovados = [r for r in resultados if not r["ok"]]
-
+    segundos = round(time.time() - inicio, 1)
+    print("[1/1] claude ... ", end="")
+    if resultado["ok"]:
+        print(verde(f"OK ({segundos}s)"))
+    else:
+        status = f"HTTP {resultado['status']}" if resultado["status"] else "sem resposta"
+        print(vermelho(f"FALHOU — {status}"))
+    print(f"    {resultado['rotulo']}: {resultado['detalhe']}")
     print()
-    print("=" * 68)
-    print(f"Resumo: {verde(str(len(aprovados)) + ' ok')} | "
-          f"{vermelho(str(len(reprovados)) + ' falha(s)')} de {len(resultados)}")
-    for resultado in reprovados:
-        print(f"  {vermelho('x')} {resultado['rotulo']}: {resultado['detalhe']}")
 
-    if reprovados:
-        print(amarelo("Dica: 401/403 = chave inválida ou sem permissão; 429 = cota/limite; "
-                      "404 = modelo fora do ar ou token sem acesso a ele."))
+    if resultado["ok"]:
+        print(f"Resumo: {verde('1 ok')} | 0 falha(s) de 1")
+        return 0
 
-    return 0 if not reprovados else 1
+    print(f"Resumo: 0 ok | {vermelho('1 falha(s)')} de 1")
+    print(amarelo("Dica: 401 = chave inválida; 403 = chave sem permissão; "
+                  "404 = modelo inexistente (veja --modelos); 429 = cota/limite."))
+    return 1
 
 
 if __name__ == "__main__":

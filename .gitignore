@@ -11,6 +11,15 @@
 back-end/.env
 backend/.env
 .envrc
+# As chaves de IA (CLAUDE_API_KEY) e as de noticia (GNEWS_API_KEY,
+# MARKETAUX_API_KEY) vivem apenas em back-end/.env, coberto pelas regras acima:
+# nenhum arquivo de segredo delas e versionado com o projeto. O frontend nunca
+# recebe essas chaves — quem fala com as APIs e o backend (/api/noticias).
+
+# configuracoes locais de teste/customizacao (costumam trazer chave dentro)
+*.local.js
+*.local.json
+*.local.mjs
 
 # certificados e chaves criptograficas
 *.pem

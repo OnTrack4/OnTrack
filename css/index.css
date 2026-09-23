@@ -834,69 +834,6 @@ body > header {
     margin-bottom: 14px;
 }
 
-/* ---------- cotas das APIs (ao lado do campo de pergunta) ---------- */
-
-.composer-cotas {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-.cota-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid #1e2a44;
-    border-radius: 999px;
-    background-color: #0d1526;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #8b99b0;
-    cursor: help;
-}
-
-.cota-nome {
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.cota-numero {
-    color: #2ee6a8;
-    font-weight: 600;
-}
-
-.cota-off .cota-numero {
-    color: #5c6b84;
-}
-
-.cota-espera {
-    border-color: #6b5a1e;
-}
-
-.cota-espera .cota-numero {
-    color: #e6c14b;
-}
-
-.cota-fim {
-    border-color: #6b2a2a;
-}
-
-.cota-fim .cota-numero {
-    color: #ff8a8a;
-}
-
-.cota-legenda,
-.cota-vazia {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px;
-    color: #5c6b84;
-}
-
 .badge-mint {
     display: inline-flex;
     align-items: center;

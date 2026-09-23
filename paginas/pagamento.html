@@ -242,37 +242,15 @@
             alert('Em breve! O Pix será integrado em breve.');
         });
 
+        // Ponto de entrada do checkout. A integração de pagamento ainda NÃO existe no
+        // backend (não há rota /api/create-checkout): antes daqui saía um fetch para
+        // essa rota, cujo 404 devolve HTML, fazia `resposta.json()` lançar e deixava o
+        // botão travado em "Redirecionando..." sem nenhum aviso — e sem try/catch.
+        // Enquanto não houver provedor de pagamento, avisa o mesmo que os outros
+        // métodos desta página. Nenhum botão chama esta função hoje; os handlers de
+        // cartão e Pix estão logo acima.
         async function iniciarCheckout() {
-            const botao = document.querySelector('.btn-pagar');
-            botao.textContent = 'Redirecionando...';
-            botao.disabled = true;
-
-            const { auth } = await import('../firebase.js');
-            const usuario = auth.currentUser;
-
-            if (!usuario) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            const resposta = await fetch('/api/create-checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    plano: planoAtual,
-                    usuarioId: usuario.uid
-                })
-            });
-
-            const dados = await resposta.json();
-
-            if (dados.url) {
-                window.location.href = dados.url;
-            } else {
-                alert('Erro ao iniciar pagamento. Tente novamente.');
-                botao.textContent = 'Assinar Premium';
-                botao.disabled = false;
-            }
+            alert('Em breve! O pagamento será integrado em breve.');
         }
 
     </script>
