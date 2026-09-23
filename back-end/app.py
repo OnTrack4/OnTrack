@@ -462,6 +462,19 @@ def _fuso(nome, offset_reserva):
         return timezone(timedelta(hours=offset_reserva))
 
 
+AGORA_COM_FUSO = _fuso(FUSO_EXIBICAO, -3)
+
+
+def agora_brasilia():
+    """
+    Agora no fuso de Brasília.
+
+    O servidor (e o runtime da Vercel) roda em UTC: um datetime.now() sem fuso
+    carimbava as coletas 3 horas à frente do relógio de quem lê a resposta.
+    """
+    return datetime.now(AGORA_COM_FUSO)
+
+
 def _meia_noite_da_cota():
     """Agora e a próxima virada do dia no fuso em que a cota do Gemini renova."""
     agora = datetime.now(_fuso(FUSO_RENOVACAO, -7))
@@ -1736,9 +1749,9 @@ def coletar_dados_financeiros(mensagem):
         # cópia rasa: o dicionário guardado não pode ser alterado pelo chamador
         return dict(em_cache, ativos=ativos)
 
-    agora = datetime.now().strftime("%d/%m/%Y às %H:%M")
+    agora = agora_brasilia().strftime("%d/%m/%Y às %H:%M")
     linhas = [
-        f"Dados de mercado coletados agora ({agora}, horário local) em fontes "
+        f"Dados de mercado coletados agora ({agora}, horário de Brasília) em fontes "
         "públicas, com pequena defasagem natural de cada provedor:"
     ]
     for ativo, cotacoes in dados_por_ativo:
@@ -2903,7 +2916,7 @@ def gerar_grafico(pergunta, memoria, contexto_economatica, output_dir=None, bloc
     plt.xticks(rotation=45, ha="right")
     plt.grid(alpha=0.3)
     # rodapé no próprio PNG: a estimativa não deve circular sem data e contexto
-    agora = datetime.now()
+    agora = agora_brasilia()
     plt.figtext(
         0.5,
         0.01,
@@ -2982,7 +2995,7 @@ def processar_mensagem(mensagem, uid=None, memoria=None):
                 "arquivo": nome_arquivo,
                 "texto": (
                     f'Gráfico gerado: "{titulo}".\n\n'
-                    f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}.\n"
+                    f"Gerado em {agora_brasilia().strftime('%d/%m/%Y às %H:%M')}.\n"
                     f"{montar_linha_de_fontes(memoria, contexto_economatica, fontes_mercado)}\n\n"
                     f"{aviso}"
                 ),
