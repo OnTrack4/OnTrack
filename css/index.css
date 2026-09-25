@@ -38,6 +38,25 @@ body > header {
     align-items: center;
     padding: 32px 24px 40px;
     gap: 32px;
+    scrollbar-width: thin;
+    scrollbar-color: #000000 transparent;
+}
+
+.conteudo::-webkit-scrollbar {
+    width: 6px;
+}
+
+.conteudo::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.conteudo::-webkit-scrollbar-thumb {
+    background-color: #000000;
+    border-radius: 999px;
+}
+
+.conteudo::-webkit-scrollbar-thumb:hover {
+    background-color: #1a1a1a;
 }
 
 /* neutraliza padding/borda que o style.css aplica a sections */
@@ -62,8 +81,9 @@ body > header {
     padding: 18px 14px 14px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #1e2a44 transparent;
+    scrollbar-color: #000000 transparent;
 }
+
 
 .sidebar-topo {
     display: flex;
